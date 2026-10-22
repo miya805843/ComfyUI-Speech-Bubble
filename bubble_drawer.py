@@ -1,7 +1,7 @@
 import math
 import re
 from typing import Tuple, List, Dict, Any, Optional
-from PIL import Image, ImageDraw, ImageFont, ImageColor
+from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageFilter, ImageChops
 
 
 class BubbleDrawer:
@@ -19,14 +19,9 @@ class BubbleDrawer:
         "…": "⋮", "‥": "︰", "=": "॥", "＝": "॥",
     }
 
-    # 縦書き時に右上にシフトする文字（句読点、小書き）
-    OFFSET_CHARS = {
-        "、": (0.6, -0.6), "。": (0.6, -0.6), ",": (0.5, -0.5), ".": (0.5, -0.5),
-        "っ": (0.2, -0.2), "ゃ": (0.2, -0.2), "ゅ": (0.2, -0.2), "ょ": (0.2, -0.2),
-        "ぁ": (0.2, -0.2), "ぃ": (0.2, -0.2), "ぅ": (0.2, -0.2), "ぇ": (0.2, -0.2), "ぉ": (0.2, -0.2),
-        "ッ": (0.2, -0.2), "ャ": (0.2, -0.2), "ュ": (0.2, -0.2), "ョ": (0.2, -0.2),
-        "ァ": (0.2, -0.2), "ィ": (0.2, -0.2), "ゥ": (0.2, -0.2), "ェ": (0.2, -0.2), "ォ": (0.2, -0.2),
-    }
+    # 小書き文字（右上寄りに配置）
+    SMALL_CHARS = set("っゃゅょぁぃぅぇぉッャュョァィゥェォ")
+    PUNCTUATION_CHARS = set("、。，．")
 
     @staticmethod
     def parse_color(color_str: str, default: Tuple[int, int, int, int] = (0, 0, 0, 255)) -> Tuple[int, int, int, int]:
@@ -34,7 +29,6 @@ class BubbleDrawer:
         try:
             color_str = color_str.strip()
             if color_str.startswith("#") and len(color_str) == 9:
-                # #RRGGBBAA
                 r = int(color_str[1:3], 16)
                 g = int(color_str[3:5], 16)
                 b = int(color_str[5:7], 16)
@@ -69,7 +63,6 @@ class BubbleDrawer:
         if not lines:
             lines = [" "]
 
-        # サイズ測定用ダミー画像
         dummy_img = Image.new("RGBA", (1, 1))
         draw = ImageDraw.Draw(dummy_img)
 
@@ -117,8 +110,18 @@ class BubbleDrawer:
         sample_bbox = draw.textbbox((0, 0), "あ", font=font)
         char_size = max(sample_bbox[2] - sample_bbox[0], sample_bbox[3] - sample_bbox[1])
 
-        max_chars_in_col = max(len(col) for col in columns)
-        total_h = max_chars_in_col * char_size
+        # 句読点を考慮した各列の高さを算出
+        col_heights = []
+        for col in columns:
+            h = 0
+            for ch in col:
+                if ch in cls.PUNCTUATION_CHARS:
+                    h += int(char_size * 0.55)
+                else:
+                    h += char_size
+            col_heights.append(h)
+
+        total_h = max(col_heights) if col_heights else char_size
         total_w = len(columns) * char_size + line_spacing * (len(columns) - 1)
 
         return columns, total_w, total_h
@@ -164,28 +167,72 @@ class BubbleDrawer:
 
             for col_idx, col in enumerate(columns):
                 col_x = start_x - col_idx * (char_cell + line_spacing)
-                col_total_h = len(col) * char_cell
-                cur_y = y0 + (box_h - col_total_h) // 2
+
+                # 列全体の高さを計算して垂直中央寄せ
+                col_h = 0
+                for ch in col:
+                    if ch in cls.PUNCTUATION_CHARS:
+                        col_h += int(char_cell * 0.55)
+                    else:
+                        col_h += char_cell
+
+                cur_y = y0 + (box_h - col_h) // 2
 
                 for ch in col:
-                    # 置換可能文字の処理
-                    draw_ch = cls.ROTATE_CHARS.get(ch, ch)
-                    # オフセット文字の処理
-                    offset_x, offset_y = 0, 0
-                    if ch in cls.OFFSET_CHARS:
-                        rx, ry = cls.OFFSET_CHARS[ch]
-                        offset_x = int(char_cell * rx * 0.5)
-                        offset_y = int(char_cell * ry * 0.5)
+                    # 句読点（直前の文字の右上に寄せる）
+                    if ch in cls.PUNCTUATION_CHARS:
+                        actual_bbox = draw.textbbox((0, 0), ch, font=font)
+                        # 右上に配置
+                        px = col_x + char_cell - actual_bbox[2] - int(char_cell * 0.12)
+                        py = cur_y - actual_bbox[1] + int(char_cell * 0.05)
+                        draw.text((px, py), ch, fill=text_color, font=font)
+                        cur_y += int(char_cell * 0.55)
 
-                    ch_bbox = draw.textbbox((0, 0), draw_ch, font=font)
-                    cw = ch_bbox[2] - ch_bbox[0]
-                    ch_h = ch_bbox[3] - ch_bbox[1]
+                    elif ch in cls.SMALL_CHARS:
+                        # 促音・拗音などの小書き文字
+                        actual_bbox = draw.textbbox((0, 0), ch, font=font)
+                        cw = actual_bbox[2] - actual_bbox[0]
+                        ch_h = actual_bbox[3] - actual_bbox[1]
+                        px = col_x + (char_cell - cw) // 2 + int(char_cell * 0.15)
+                        py = cur_y + (char_cell - ch_h) // 2 - int(char_cell * 0.08)
+                        draw.text((px, py), ch, fill=text_color, font=font)
+                        cur_y += char_cell
 
-                    px = col_x + (char_cell - cw) // 2 + offset_x
-                    py = cur_y + (char_cell - ch_h) // 2 + offset_y
+                    elif ch in cls.ROTATE_CHARS:
+                        # 90度回転して描画（長音記号や括弧）
+                        if ch in ("ー", "―", "ｰ", "～", "〜"):
+                            draw_ch = "丨"
+                            actual_bbox = draw.textbbox((0, 0), draw_ch, font=font)
+                            cw = actual_bbox[2] - actual_bbox[0]
+                            ch_h = actual_bbox[3] - actual_bbox[1]
+                            px = col_x + (char_cell - cw) // 2
+                            py = cur_y + (char_cell - ch_h) // 2
+                            draw.text((px, py), draw_ch, fill=text_color, font=font)
+                        else:
+                            # 括弧等: フォントの未収録を避けるためPillowで90度回転
+                            pad = max(10, char_cell // 2)
+                            tw = char_cell + pad * 2
+                            ch_img = Image.new("RGBA", (tw, tw), (0, 0, 0, 0))
+                            cd = ImageDraw.Draw(ch_img)
+                            cb = cd.textbbox((0, 0), ch, font=font)
+                            cw = cb[2] - cb[0]
+                            ch_h = cb[3] - cb[1]
+                            cd.text(((tw - cw) // 2 - cb[0], (tw - ch_h) // 2 - cb[1]), ch, fill=text_color, font=font)
+                            rot_ch = ch_img.rotate(-90, resample=Image.Resampling.BILINEAR)
+                            target_x = col_x + (char_cell - tw) // 2
+                            target_y = cur_y + (char_cell - tw) // 2
+                            draw._image.paste(rot_ch, (target_x, target_y), rot_ch)
+                        cur_y += char_cell
 
-                    draw.text((px, py), draw_ch, fill=text_color, font=font)
-                    cur_y += char_cell
+                    else:
+                        # 通常文字
+                        actual_bbox = draw.textbbox((0, 0), ch, font=font)
+                        cw = actual_bbox[2] - actual_bbox[0]
+                        ch_h = actual_bbox[3] - actual_bbox[1]
+                        px = col_x + (char_cell - cw) // 2
+                        py = cur_y + (char_cell - ch_h) // 2
+                        draw.text((px, py), ch, fill=text_color, font=font)
+                        cur_y += char_cell
 
     @classmethod
     def render_bubble(
@@ -196,6 +243,7 @@ class BubbleDrawer:
         direction: str = "vertical",
         bubble_type: str = "ellipse",
         tail_direction: str = "bottom_left",
+        tail_length: float = 0.7,
         pos_ratio: Tuple[float, float] = (0.5, 0.5),
         text_color: str = "#000000",
         bubble_color: str = "#FFFFFF",
@@ -204,6 +252,7 @@ class BubbleDrawer:
         padding: int = 24,
         max_chars_per_line: int = 12,
         line_spacing: int = 6,
+        bubble_opacity: float = 1.0,
         opacity: float = 1.0,
     ) -> Image.Image:
         """高品質な吹き出し画像を生成（透明背景RGBA）"""
@@ -220,18 +269,21 @@ class BubbleDrawer:
         pad_x = padding
         pad_y = padding
         if bubble_type == "ellipse":
-            # 楕円は四隅が削れるためパディングを広めに確保
             pad_x = int(padding * 1.5)
             pad_y = int(padding * 1.5)
         elif bubble_type == "thought":
-            pad_x = int(padding * 1.7)
-            pad_y = int(padding * 1.7)
+            pad_x = int(padding * 2.2)
+            pad_y = int(padding * 1.8)
         elif bubble_type == "shout":
             pad_x = int(padding * 1.8)
             pad_y = int(padding * 1.8)
 
         bubble_w = content_w + pad_x * 2
         bubble_h = content_h + pad_y * 2
+
+        if bubble_type == "thought":
+            # 雲型は縦長すぎるとコブと干渉するため丸みを持たせる
+            bubble_w = max(bubble_w, int(bubble_h * 0.75))
 
         # 最小サイズ制限
         min_dim = int(font.size * 2.2)
@@ -249,14 +301,21 @@ class BubbleDrawer:
         by1 = by0 + bubble_h
 
         # カラー解析
-        b_col = cls.parse_color(bubble_color, (255, 255, 255, 255))
-        d_col = cls.parse_color(border_color, (0, 0, 0, 255))
-        t_col = cls.parse_color(text_color, (0, 0, 0, 255))
+        b_col_raw = cls.parse_color(bubble_color, (255, 255, 255, 255))
+        d_col_raw = cls.parse_color(border_color, (0, 0, 0, 255))
+        t_col_raw = cls.parse_color(text_color, (0, 0, 0, 255))
 
-        if opacity < 1.0:
-            b_col = (b_col[0], b_col[1], b_col[2], int(b_col[3] * opacity))
-            d_col = (d_col[0], d_col[1], d_col[2], int(d_col[3] * opacity))
-            t_col = (t_col[0], t_col[1], t_col[2], int(t_col[3] * opacity))
+        # 透過率の適用:
+        # bubble_color には bubble_opacity * opacity を反映（背景透過）
+        b_alpha = int(b_col_raw[3] * bubble_opacity * opacity)
+        b_col = (b_col_raw[0], b_col_raw[1], b_col_raw[2], max(0, min(255, b_alpha)))
+
+        # 枠線とテキストには全体の opacity を反映
+        d_alpha = int(d_col_raw[3] * opacity)
+        d_col = (d_col_raw[0], d_col_raw[1], d_col_raw[2], max(0, min(255, d_alpha)))
+
+        t_alpha = int(t_col_raw[3] * opacity)
+        t_col = (t_col_raw[0], t_col_raw[1], t_col_raw[2], max(0, min(255, t_alpha)))
 
         # 高解像度キャンバス準備
         canvas_w = img_w * scale
@@ -270,44 +329,37 @@ class BubbleDrawer:
         sbw, sbh = bubble_w * scale, bubble_h * scale
         sb_width = border_width * scale
 
-        # マスクによる完全一体化描画（内側の重なり線を排除し、完璧な外枠を生成）
+        # マスクによる完全一体化描画
         shape_mask = Image.new("L", (canvas_w, canvas_h), 0)
         mask_draw = ImageDraw.Draw(shape_mask)
 
         # 形状に応じたシルエットを白(255)で塗りつぶし
         if bubble_type == "ellipse":
-            cls._draw_ellipse_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction)
+            cls._draw_ellipse_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length)
         elif bubble_type == "rounded_rect":
-            cls._draw_rounded_rect_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction)
+            cls._draw_rounded_rect_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length)
         elif bubble_type == "thought":
-            cls._draw_thought_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction)
+            cls._draw_thought_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length)
         elif bubble_type == "shout":
-            cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction)
+            cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length)
 
-        # 枠線（ボーダー）と塗りつぶし（フィル）の合成
-        if sb_width > 0:
-            from PIL import ImageFilter
-            # 奇数のカーネルサイズを計算
+        # 枠線（ボーダー）の描画
+        if sb_width > 0 and d_col[3] > 0:
             kernel_size = sb_width * 2 + 1
             dilated_mask = shape_mask.filter(ImageFilter.MaxFilter(kernel_size))
-            
-            # 枠線部分のマスク = 拡張マスク - 内側マスク
-            border_mask = Image.new("L", (canvas_w, canvas_h), 0)
-            # numpyを使わずPILのImageChopsまたはevalで高速差分
-            from PIL import ImageChops
             border_mask = ImageChops.subtract(dilated_mask, shape_mask)
 
-            # 枠線描画
             border_layer = Image.new("RGBA", (canvas_w, canvas_h), d_col)
             canvas.paste(border_layer, (0, 0), border_mask)
 
-        # 吹き出し内側の塗りつぶし
-        fill_layer = Image.new("RGBA", (canvas_w, canvas_h), b_col)
-        canvas.paste(fill_layer, (0, 0), shape_mask)
+        # 吹き出し内側の塗りつぶし（背景透過を反映）
+        if b_col[3] > 0:
+            fill_layer = Image.new("RGBA", (canvas_w, canvas_h), b_col)
+            canvas.paste(fill_layer, (0, 0), shape_mask)
 
         # 思考バブル（モコモコ）のしっぽの小丸を描画
         if bubble_type == "thought" and tail_direction != "none":
-            cls._draw_thought_tail_dots(canvas, draw, cx * scale, cy * scale, bubble_w * scale / 2, bubble_h * scale / 2, tail_direction, b_col, d_col, sb_width)
+            cls._draw_thought_tail_dots(canvas, cx * scale, cy * scale, bubble_w * scale / 2, bubble_h * scale / 2, tail_direction, tail_length, b_col, d_col, sb_width)
 
         # テキスト描画用拡大フォント
         scaled_font = font
@@ -330,112 +382,131 @@ class BubbleDrawer:
             line_spacing * scale
         )
 
-        # Lanczos で元解像度に縮小（最高精度のアンチエイリアス）
+        # Lanczos で元解像度に縮小
         result = canvas.resize((img_w, img_h), Image.Resampling.LANCZOS)
         return result
 
     @classmethod
-    def _draw_ellipse_silhouette(cls, draw, x0, y0, x1, y1, tail_dir):
+    def _draw_ellipse_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length):
         """楕円としっぽの白マスクを描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
         rx = (x1 - x0) / 2
         ry = (y1 - y0) / 2
         draw.ellipse([x0, y0, x1, y1], fill=255)
-        if tail_dir != "none":
-            tail_points = cls._get_tail_points(cx, cy, rx, ry, tail_dir)
+        if tail_dir != "none" and tail_length > 0:
+            tail_points = cls._get_tail_points(cx, cy, rx, ry, tail_dir, tail_length)
             if tail_points:
                 draw.polygon(tail_points, fill=255)
 
     @classmethod
-    def _draw_rounded_rect_silhouette(cls, draw, x0, y0, x1, y1, tail_dir):
+    def _draw_rounded_rect_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length):
         """角丸長方形としっぽの白マスクを描画"""
         radius = min((x1 - x0), (y1 - y0)) * 0.15
         draw.rounded_rectangle([x0, y0, x1, y1], radius=radius, fill=255)
-        if tail_dir != "none":
+        if tail_dir != "none" and tail_length > 0:
             cx = (x0 + x1) / 2
             cy = (y0 + y1) / 2
             rx = (x1 - x0) / 2
             ry = (y1 - y0) / 2
-            tail_points = cls._get_tail_points(cx, cy, rx, ry, tail_dir)
+            tail_points = cls._get_tail_points(cx, cy, rx, ry, tail_dir, tail_length)
             if tail_points:
                 draw.polygon(tail_points, fill=255)
 
     @classmethod
-    def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir):
-        """モコモコ思考バブルの白マスクを描画"""
+    def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length):
+        """より自然でふわふわした雲型思考バブルの白マスクを描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
         rx = (x1 - x0) / 2
         ry = (y1 - y0) / 2
-        num_bumps = 18
-        bump_r = min(rx, ry) * 0.32
 
-        draw.ellipse([x0, y0, x1, y1], fill=255)
+        # 内側楕円で土台を確保
+        draw.ellipse([cx - rx * 0.85, cy - ry * 0.85, cx + rx * 0.85, cy + ry * 0.85], fill=255)
+
+        # 14個の大小のリズムを持ったモコモココブ
+        num_bumps = 14
         for i in range(num_bumps):
             angle = 2 * math.pi * i / num_bumps
-            bx = cx + rx * 0.9 * math.cos(angle)
-            by = cy + ry * 0.9 * math.sin(angle)
+            # 大小の自然なウェーブ（振幅0.18）
+            size_mod = 0.92 + 0.20 * math.sin(angle * 3.0 + 0.4)
+            bump_r = min(rx, ry) * 0.33 * size_mod
+
+            bx = cx + rx * 0.90 * math.cos(angle)
+            by = cy + ry * 0.90 * math.sin(angle)
             draw.ellipse([bx - bump_r, by - bump_r, bx + bump_r, by + bump_r], fill=255)
 
     @classmethod
-    def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir):
-        """トゲトゲ叫びバブルの白マスクを描画"""
+    def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length):
+        """よりダイナミックで手描きフラッシュ感のあるトゲトゲ叫びバブルの白マスクを描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
         rx = (x1 - x0) / 2
         ry = (y1 - y0) / 2
         points = []
-        num_spikes = 20
+        num_spikes = 24
         tail_angle = cls._get_tail_angle(tail_dir)
 
         for i in range(num_spikes * 2):
             angle = math.pi * i / num_spikes
             is_outer = (i % 2 == 1)
+
             if is_outer:
-                mult = 1.15
-                if tail_dir != "none" and abs((angle - tail_angle + math.pi) % (2 * math.pi) - math.pi) < 0.25:
-                    mult = 1.45
+                # 漫画の手描きフラッシュのような大小のリズム感
+                rhythm = 1.0 + 0.22 * math.sin(i * 2.7) + 0.12 * math.cos(i * 1.5)
+                mult = 1.15 * rhythm
+
+                # しっぽ方向のトゲを tail_length に応じて鋭く突き出す
+                ang_diff = abs((angle - tail_angle + math.pi) % (2 * math.pi) - math.pi)
+                if ang_diff < 0.25 and tail_dir != "none":
+                    mult = 1.2 + 0.8 * tail_length
+
                 px = cx + rx * mult * math.cos(angle)
                 py = cy + ry * mult * math.sin(angle)
             else:
-                px = cx + rx * 0.9 * math.cos(angle)
-                py = cy + ry * 0.9 * math.sin(angle)
+                # 谷（内側）
+                px = cx + rx * 0.88 * math.cos(angle)
+                py = cy + ry * 0.88 * math.sin(angle)
+
             points.append((px, py))
 
         draw.polygon(points, fill=255)
 
     @classmethod
-    def _draw_thought_tail_dots(cls, canvas, draw, cx, cy, rx, ry, tail_dir, fill, outline, width):
-        """思考バブルのしっぽ（独立した小さな円）を描画"""
-        dots = cls._get_thought_tail_dots(cx, cy, rx, ry, tail_dir)
+    def _draw_thought_tail_dots(cls, canvas, cx, cy, rx, ry, tail_dir, tail_length, fill, outline, width):
+        """思考バブルのしっぽ（独立した小さな円群）を描画"""
+        if tail_length <= 0:
+            return
+
+        angle = cls._get_tail_angle(tail_dir)
+        dist_base = max(rx, ry) * 1.10
+        dist_step = max(rx, ry) * 0.28 * tail_length
+
+        dots = [
+            (cx + dist_base * math.cos(angle), cy + dist_base * math.sin(angle), rx * 0.13),
+            (cx + (dist_base + dist_step) * math.cos(angle), cy + (dist_base + dist_step) * math.sin(angle), rx * 0.085),
+            (cx + (dist_base + dist_step * 2.0) * math.cos(angle), cy + (dist_base + dist_step * 2.0) * math.sin(angle), rx * 0.05),
+        ]
+
+        draw = ImageDraw.Draw(canvas)
         for dx, dy, dr in dots:
-            draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=fill, outline=outline, width=width)
+            if fill[3] > 0:
+                draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=fill)
+            if width > 0 and outline[3] > 0:
+                draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], outline=outline, width=width)
 
     @classmethod
-    def _get_tail_points(cls, cx, cy, rx, ry, tail_dir) -> Optional[List[Tuple[float, float]]]:
+    def _get_tail_points(cls, cx, cy, rx, ry, tail_dir, tail_length) -> Optional[List[Tuple[float, float]]]:
         """三角形のしっぽの頂点リストを返す"""
         angle = cls._get_tail_angle(tail_dir)
         spread = 0.25  # しっぽの根本の幅（ラジアン）
-        length = max(rx, ry) * 0.7  # しっぽの長さ
+        length = max(rx, ry) * tail_length  # しっぽの長さ
 
         p0 = (cx + rx * math.cos(angle - spread), cy + ry * math.sin(angle - spread))
         p1 = (cx + (rx + length) * math.cos(angle), cy + (ry + length) * math.sin(angle))
         p2 = (cx + rx * math.cos(angle + spread), cy + ry * math.sin(angle + spread))
 
         return [p0, p1, p2]
-
-    @classmethod
-    def _get_thought_tail_dots(cls, cx, cy, rx, ry, tail_dir) -> List[Tuple[float, float, float]]:
-        """思考バブル用の小円（x, y, radius）リストを返す"""
-        angle = cls._get_tail_angle(tail_dir)
-        dist_base = max(rx, ry) * 1.15
-        dots = [
-            (cx + dist_base * math.cos(angle), cy + dist_base * math.sin(angle), rx * 0.14),
-            (cx + (dist_base + rx * 0.25) * math.cos(angle), cy + (dist_base + ry * 0.25) * math.sin(angle), rx * 0.09),
-            (cx + (dist_base + rx * 0.45) * math.cos(angle), cy + (dist_base + ry * 0.45) * math.sin(angle), rx * 0.05),
-        ]
-        return dots
 
     @staticmethod
     def _get_tail_angle(tail_dir: str) -> float:

@@ -35,6 +35,13 @@ class SpeechBubbleNode:
                 "tail_direction": (["bottom_left", "bottom_right", "top_left", "top_right", "none"], {
                     "default": "bottom_left"
                 }),
+                "tail_length": ("FLOAT", {
+                    "default": 0.7,
+                    "min": 0.0,
+                    "max": 3.0,
+                    "step": 0.05,
+                    "display": "slider"
+                }),
                 "pos_x": ("FLOAT", {
                     "default": 0.5,
                     "min": 0.0,
@@ -75,6 +82,13 @@ class SpeechBubbleNode:
                 }),
             },
             "optional": {
+                "bubble_opacity": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.05,
+                    "display": "slider"
+                }),
                 "padding": ("INT", {
                     "default": 24,
                     "min": 0,
@@ -115,6 +129,7 @@ class SpeechBubbleNode:
         direction: str,
         bubble_type: str,
         tail_direction: str,
+        tail_length: float,
         pos_x: float,
         pos_y: float,
         font_name: str,
@@ -123,6 +138,7 @@ class SpeechBubbleNode:
         bubble_color: str,
         border_color: str,
         border_width: int,
+        bubble_opacity: float = 1.0,
         padding: int = 24,
         max_chars_per_line: int = 10,
         line_spacing: int = 6,
@@ -152,6 +168,7 @@ class SpeechBubbleNode:
                 direction=direction,
                 bubble_type=bubble_type,
                 tail_direction=tail_direction,
+                tail_length=tail_length,
                 pos_ratio=(pos_x, pos_y),
                 text_color=text_color,
                 bubble_color=bubble_color,
@@ -160,6 +177,7 @@ class SpeechBubbleNode:
                 padding=padding,
                 max_chars_per_line=max_chars_per_line,
                 line_spacing=line_spacing,
+                bubble_opacity=bubble_opacity,
                 opacity=opacity,
             )
 
