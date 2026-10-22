@@ -118,6 +118,7 @@ class BubbleDrawer:
     @classmethod
     def draw_text_content(
         cls,
+        canvas: Image.Image,
         draw: ImageDraw.ImageDraw,
         text: str,
         font: ImageFont.FreeTypeFont,
@@ -140,7 +141,6 @@ class BubbleDrawer:
             for line in lines:
                 line_bbox = draw.textbbox((0, 0), line if line else " ", font=font)
                 line_h = line_bbox[3] - line_bbox[1]
-                # 前揃え（左端 x0 から開始）
                 cur_x = x0
                 draw.text((cur_x, cur_y), line, fill=text_color, font=font)
                 cur_y += line_h + line_spacing
@@ -157,20 +157,24 @@ class BubbleDrawer:
 
             for col_idx, col in enumerate(columns):
                 col_x = start_x - col_idx * (char_cell + line_spacing)
-                # 前揃え（上端 y0 から開始。空白・スペースでの位置調整が可能）
                 cur_y = y0
 
                 for ch in col:
                     if ch in cls.PUNCTUATION_CHARS:
-                        # 句読点: インクの中心を文字セルの右側(75%)かつ上側(22%)に確実に配置
-                        actual_bbox = draw.textbbox((0, 0), ch, font=font)
-                        target_cx = col_x + int(char_cell * 0.75)
-                        target_cy = cur_y + int(char_cell * 0.22)
-                        ink_cx = (actual_bbox[0] + actual_bbox[2]) / 2.0
-                        ink_cy = (actual_bbox[1] + actual_bbox[3]) / 2.0
-                        px = int(target_cx - ink_cx)
-                        py = int(target_cy - ink_cy)
-                        draw.text((px, py), ch, fill=text_color, font=font)
+                        # 句読点（、。）: 実インク領域を精密に取得し、文字セルの右上に確実に吸着
+                        temp_img = Image.new("RGBA", (char_cell * 2, char_cell * 2), (0, 0, 0, 0))
+                        td = ImageDraw.Draw(temp_img)
+                        td.text((char_cell // 2, char_cell // 2), ch, fill=text_color, font=font)
+                        ink_bbox = temp_img.getbbox()
+                        if ink_bbox:
+                            glyph_crop = temp_img.crop(ink_bbox)
+                            gw, gh = glyph_crop.size
+                            # セル内の右上部（直前の文字の右下肩）
+                            target_x = col_x + char_cell - gw - int(char_cell * 0.08)
+                            target_y = cur_y + int(char_cell * 0.08)
+                            canvas.paste(glyph_crop, (target_x, target_y), glyph_crop)
+                        else:
+                            draw.text((col_x, cur_y), ch, fill=text_color, font=font)
                         cur_y += int(char_cell * 0.55)
 
                     elif ch in cls.SMALL_CHARS:
@@ -205,7 +209,7 @@ class BubbleDrawer:
                             rot_ch = ch_img.rotate(-90, resample=Image.Resampling.BILINEAR)
                             target_x = col_x + (char_cell - tw) // 2
                             target_y = cur_y + (char_cell - tw) // 2
-                            draw._image.paste(rot_ch, (target_x, target_y), rot_ch)
+                            canvas.paste(rot_ch, (target_x, target_y), rot_ch)
                         cur_y += char_cell
 
                     else:
@@ -250,24 +254,24 @@ class BubbleDrawer:
         else:
             _, content_w, content_h = cls.layout_vertical(text, font, max_chars_per_line, line_spacing)
 
-        # 吹き出し内包サイズ
-        pad_x = padding
-        pad_y = padding
-        if bubble_type == "ellipse":
-            pad_x = int(padding * 1.5)
-            pad_y = int(padding * 1.5)
+        # 幾何学的に内接する黄金比サイズ計算（パディングに忠実で、かつ文字が境界線に触れない）
+        if bubble_type == "rounded_rect":
+            bubble_w = content_w + padding * 2
+            bubble_h = content_h + padding * 2
         elif bubble_type == "thought":
-            pad_x = int(padding * 2.2)
-            pad_y = int(padding * 1.8)
+            bubble_w = int(content_w * 1.38 + padding * 2)
+            bubble_h = int(content_h * 1.25 + padding * 2)
+            bubble_w = max(bubble_w, int(bubble_h * 0.70))
+            bubble_h = max(bubble_h, int(bubble_w * 0.55))
         elif bubble_type == "shout":
-            pad_x = int(padding * 1.8)
-            pad_y = int(padding * 1.8)
-
-        bubble_w = content_w + pad_x * 2
-        bubble_h = content_h + pad_y * 2
-
-        if bubble_type == "thought":
-            bubble_w = max(bubble_w, int(bubble_h * 0.75))
+            bubble_w = int(content_w * 1.45 + padding * 2)
+            bubble_h = int(content_h * 1.35 + padding * 2)
+            bubble_w = max(bubble_w, int(bubble_h * 0.65))
+            bubble_h = max(bubble_h, int(bubble_w * 0.65))
+        else:  # ellipse
+            bubble_w = int(content_w * 1.35 + padding * 2)
+            bubble_h = int(content_h * 1.25 + padding * 2)
+            bubble_w = max(bubble_w, int(bubble_h * 0.65))
 
         min_dim = int(font.size * 2.2)
         bubble_w = max(bubble_w, min_dim)
@@ -308,7 +312,7 @@ class BubbleDrawer:
         shape_mask = Image.new("L", (canvas_w, canvas_h), 0)
         mask_draw = ImageDraw.Draw(shape_mask)
 
-        # 形状に応じたシルエットを白(255)で塗りつぶし（ランダム性反映）
+        # 形状に応じたシルエットを白(255)で塗りつぶし
         if bubble_type == "ellipse":
             cls._draw_ellipse_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length)
         elif bubble_type == "rounded_rect":
@@ -318,14 +322,12 @@ class BubbleDrawer:
         elif bubble_type == "shout":
             cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng)
 
-        # 枠線（ボーダー）の描画
+        # 枠線（外側拡張下敷き方式で境界線の隙間を完全に排除）
         if sb_width > 0 and d_col[3] > 0:
             kernel_size = sb_width * 2 + 1
             dilated_mask = shape_mask.filter(ImageFilter.MaxFilter(kernel_size))
-            border_mask = ImageChops.subtract(dilated_mask, shape_mask)
-
             border_layer = Image.new("RGBA", (canvas_w, canvas_h), d_col)
-            canvas.paste(border_layer, (0, 0), border_mask)
+            canvas.paste(border_layer, (0, 0), dilated_mask)
 
         # 吹き出し内側の塗りつぶし
         if b_col[3] > 0:
@@ -343,8 +345,15 @@ class BubbleDrawer:
         except Exception:
             pass
 
-        text_bbox = (sbx0 + pad_x * scale, sby0 + pad_y * scale, sbx1 - pad_x * scale, sby1 - pad_y * scale)
+        # 吹き出し中央にテキスト配置ボックスを設定（均等マージン）
+        tx0 = sbx0 + (sbw - content_w * scale) // 2
+        ty0 = sby0 + (sbh - content_h * scale) // 2
+        tx1 = tx0 + content_w * scale
+        ty1 = ty0 + content_h * scale
+        text_bbox = (tx0, ty0, tx1, ty1)
+
         cls.draw_text_content(
+            canvas,
             draw,
             text,
             scaled_font,
@@ -385,33 +394,39 @@ class BubbleDrawer:
 
     @classmethod
     def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
-        """ランダム性を持った自然な雲型思考バブルを描画"""
+        """指定外枠内にピタリと収まる、横書き・縦書き両対応の自然な雲型思考バブルを描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
-        rx = (x1 - x0) / 2
-        ry = (y1 - y0) / 2
+        w = x1 - x0
+        h = y1 - y0
 
-        draw.ellipse([cx - rx * 0.85, cy - ry * 0.85, cx + rx * 0.85, cy + ry * 0.85], fill=255)
+        # コブの基準半径（外枠w, hを超えないように設計）
+        base_bump = min(w, h) * 0.15
+        rx = w / 2 - base_bump
+        ry = h / 2 - base_bump
 
-        num_bumps = rng.randint(13, 17)
+        # 内側楕円
+        draw.ellipse([cx - rx * 0.88, cy - ry * 0.88, cx + rx * 0.88, cy + ry * 0.88], fill=255)
+
+        # 周長に応じたコブの個数（横長でも縦長でもバランスよく配置）
+        perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
+        num_bumps = max(10, int(perimeter / (base_bump * 1.5)))
+
         for i in range(num_bumps):
-            base_angle = 2 * math.pi * i / num_bumps
-            jitter_angle = base_angle + rng.uniform(-0.08, 0.08)
-            # コブの大きさをランダムに変動（自然な手描き感）
-            size_mod = rng.uniform(0.80, 1.25)
-            bump_r = min(rx, ry) * 0.33 * size_mod
-
-            bx = cx + rx * 0.90 * math.cos(jitter_angle)
-            by = cy + ry * 0.90 * math.sin(jitter_angle)
+            angle = 2 * math.pi * i / num_bumps + rng.uniform(-0.04, 0.04)
+            bump_r = base_bump * rng.uniform(0.85, 1.15)
+            bx = cx + rx * math.cos(angle)
+            by = cy + ry * math.sin(angle)
             draw.ellipse([bx - bump_r, by - bump_r, bx + bump_r, by + bump_r], fill=255)
 
     @classmethod
     def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
-        """ランダム性を持ったダイナミックな手描き叫びバブルを描画"""
+        """外枠サイズ内に収まる、ダイナミックな手描き叫びバブルを描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
-        rx = (x1 - x0) / 2
-        ry = (y1 - y0) / 2
+        rx = (x1 - x0) / 2 * 0.78
+        ry = (y1 - y0) / 2 * 0.78
+
         points = []
         num_spikes = rng.randint(22, 28)
         tail_angle = cls._get_tail_angle(tail_dir)
@@ -422,13 +437,12 @@ class BubbleDrawer:
             is_outer = (i % 2 == 1)
 
             if is_outer:
-                # トゲの長さをランダムに散らす
-                rhythm = rng.uniform(0.95, 1.35)
+                rhythm = rng.uniform(0.95, 1.25)
                 mult = 1.15 * rhythm
 
                 ang_diff = abs((angle - tail_angle + math.pi) % (2 * math.pi) - math.pi)
                 if ang_diff < 0.28 and tail_dir != "none":
-                    mult = 1.25 + 0.85 * tail_length
+                    mult = 1.20 + 0.85 * tail_length
 
                 px = cx + rx * mult * math.cos(angle)
                 py = cy + ry * mult * math.sin(angle)
@@ -448,21 +462,21 @@ class BubbleDrawer:
             return
 
         angle = cls._get_tail_angle(tail_dir) + rng.uniform(-0.05, 0.05)
-        dist_base = max(rx, ry) * 1.10
-        dist_step = max(rx, ry) * 0.28 * tail_length
+        dist_base = max(rx, ry) * 1.05
+        dist_step = max(rx, ry) * 0.25 * tail_length
 
         dots = [
-            (cx + dist_base * math.cos(angle), cy + dist_base * math.sin(angle), rx * 0.13),
-            (cx + (dist_base + dist_step) * math.cos(angle), cy + (dist_base + dist_step) * math.sin(angle), rx * 0.085),
-            (cx + (dist_base + dist_step * 2.0) * math.cos(angle), cy + (dist_base + dist_step * 2.0) * math.sin(angle), rx * 0.05),
+            (cx + dist_base * math.cos(angle), cy + dist_base * math.sin(angle), rx * 0.12),
+            (cx + (dist_base + dist_step) * math.cos(angle), cy + (dist_base + dist_step) * math.sin(angle), rx * 0.08),
+            (cx + (dist_base + dist_step * 2.0) * math.cos(angle), cy + (dist_base + dist_step * 2.0) * math.sin(angle), rx * 0.045),
         ]
 
         draw = ImageDraw.Draw(canvas)
         for dx, dy, dr in dots:
+            if width > 0 and outline[3] > 0:
+                draw.ellipse([dx - dr - width, dy - dr - width, dx + dr + width, dy + dr + width], fill=outline)
             if fill[3] > 0:
                 draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=fill)
-            if width > 0 and outline[3] > 0:
-                draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], outline=outline, width=width)
 
     @classmethod
     def _get_tail_points(cls, cx, cy, rx, ry, tail_dir, tail_length) -> Optional[List[Tuple[float, float]]]:
