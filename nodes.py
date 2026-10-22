@@ -114,6 +114,12 @@ class SpeechBubbleNode:
                     "step": 0.05,
                     "display": "slider"
                 }),
+                "seed": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 0xffffffffffffffff,
+                    "control_after_generate": "randomize"
+                }),
             }
         }
 
@@ -143,6 +149,7 @@ class SpeechBubbleNode:
         max_chars_per_line: int = 10,
         line_spacing: int = 6,
         opacity: float = 1.0,
+        seed: int = 0,
     ):
         if torch is None:
             raise RuntimeError("PyTorchがインストールされていません。")
@@ -160,7 +167,8 @@ class SpeechBubbleNode:
             base_pil = Image.fromarray(img_np).convert("RGBA")
             img_w, img_h = base_pil.size
 
-            # 吹き出しレイヤー生成
+            # 吹き出しレイヤー生成（バッチごとにシードを少しずらす）
+            current_seed = (seed + i) & 0xffffffffffffffff
             bubble_layer = BubbleDrawer.render_bubble(
                 image_size=(img_w, img_h),
                 text=text,
@@ -179,6 +187,7 @@ class SpeechBubbleNode:
                 line_spacing=line_spacing,
                 bubble_opacity=bubble_opacity,
                 opacity=opacity,
+                seed=current_seed,
             )
 
             # アルファ合成
