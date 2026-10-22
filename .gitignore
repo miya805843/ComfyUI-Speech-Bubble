@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+.vscode/
+.claude/
+*.exe
+*.pyc
+*.pyo
+*.pyd
+.env
+storage/
+tmp/
+docs/
+.agents/
