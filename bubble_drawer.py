@@ -259,10 +259,10 @@ class BubbleDrawer:
             bubble_w = content_w + padding * 2
             bubble_h = content_h + padding * 2
         elif bubble_type == "thought":
-            bubble_w = int(content_w * 1.38 + padding * 2)
-            bubble_h = int(content_h * 1.25 + padding * 2)
-            bubble_w = max(bubble_w, int(bubble_h * 0.70))
-            bubble_h = max(bubble_h, int(bubble_w * 0.55))
+            bubble_w = int(content_w + padding * 2 + font.size * 1.8)
+            bubble_h = int(content_h + padding * 2 + font.size * 1.8)
+            bubble_w = max(bubble_w, int(bubble_h * 1.15))
+            bubble_h = max(bubble_h, int(bubble_w * 0.52))
         elif bubble_type == "shout":
             bubble_w = int(content_w * 1.45 + padding * 2)
             bubble_h = int(content_h * 1.35 + padding * 2)
@@ -394,30 +394,58 @@ class BubbleDrawer:
 
     @classmethod
     def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
-        """指定外枠内にピタリと収まる、横書き・縦書き両対応の自然な雲型思考バブルを描画"""
+        """弧長等間隔サンプリングにより、アスペクト比を問わず楕円の凹みや平坦線が出ないふっくら雲型を描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
         w = x1 - x0
         h = y1 - y0
 
-        # コブの基準半径（外枠w, hを超えないように設計）
-        base_bump = min(w, h) * 0.15
-        rx = w / 2 - base_bump
-        ry = h / 2 - base_bump
+        bump_r = min(w, h) * 0.18
+        rx = (w - bump_r * 2) / 2
+        ry = (h - bump_r * 2) / 2
 
-        # 内側楕円
-        draw.ellipse([cx - rx * 0.88, cy - ry * 0.88, cx + rx * 0.88, cy + ry * 0.88], fill=255)
+        # 内側楕円（中央の穴埋め用：コブの谷間から絶対に露出しないよう小さめ0.70にする）
+        draw.ellipse([cx - rx * 0.70, cy - ry * 0.70, cx + rx * 0.70, cy + ry * 0.70], fill=255)
 
-        # 周長に応じたコブの個数（横長でも縦長でもバランスよく配置）
+        # 楕円周長を計算し、コブ同士が半分以上重なり合うように配置（間隔 = bump_r * 1.15）
         perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
-        num_bumps = max(10, int(perimeter / (base_bump * 1.5)))
+        num_bumps = max(14, int(perimeter / (bump_r * 1.15)))
 
+        # 弧長に沿った等間隔角度テーブルを生成（楕円パラメータtの等分による偏りを排除）
+        samples = 1000
+        angles_table = [0.0]
+        total_arc = 0.0
+        prev_x = rx
+        prev_y = 0.0
+        for s in range(1, samples + 1):
+            t = 2 * math.pi * s / samples
+            px = rx * math.cos(t)
+            py = ry * math.sin(t)
+            total_arc += math.hypot(px - prev_x, py - prev_y)
+            angles_table.append(total_arc)
+            prev_x = px
+            prev_y = py
+
+        arc_step = total_arc / num_bumps
         for i in range(num_bumps):
-            angle = 2 * math.pi * i / num_bumps + rng.uniform(-0.04, 0.04)
-            bump_r = base_bump * rng.uniform(0.85, 1.15)
-            bx = cx + rx * math.cos(angle)
-            by = cy + ry * math.sin(angle)
-            draw.ellipse([bx - bump_r, by - bump_r, bx + bump_r, by + bump_r], fill=255)
+            target_arc = i * arc_step
+            low = 0
+            high = samples
+            while low < high:
+                mid = (low + high) // 2
+                if angles_table[mid] < target_arc:
+                    low = mid + 1
+                else:
+                    high = mid
+            t = 2 * math.pi * low / samples
+
+            # 自然なランダム大小リズム（手描き雲の風合い）
+            size_mod = 1.0 + 0.16 * math.sin(t * 3.0 + 0.4) + rng.uniform(-0.05, 0.05)
+            r = bump_r * size_mod
+
+            bx = cx + rx * math.cos(t)
+            by = cy + ry * math.sin(t)
+            draw.ellipse([bx - r, by - r, bx + r, by + r], fill=255)
 
     @classmethod
     def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
@@ -457,18 +485,24 @@ class BubbleDrawer:
 
     @classmethod
     def _draw_thought_tail_dots(cls, canvas, cx, cy, rx, ry, tail_dir, tail_length, fill, outline, width, rng: random.Random):
-        """思考バブルのしっぽ（独立した小さな円群）を描画"""
+        """思考バブルのしっぽ（雲のフチから直接連なる独立した小丸群）を描画"""
         if tail_length <= 0:
             return
 
-        angle = cls._get_tail_angle(tail_dir) + rng.uniform(-0.05, 0.05)
-        dist_base = max(rx, ry) * 1.05
-        dist_step = max(rx, ry) * 0.25 * tail_length
+        angle = cls._get_tail_angle(tail_dir)
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
 
+        bump_r = min(rx, ry) * 0.36
+        # 雲の外フチの座標を正確に算出
+        edge_x = cx + (rx + bump_r * 0.75) * cos_a
+        edge_y = cy + (ry + bump_r * 0.75) * sin_a
+
+        step = min(rx, ry) * 0.32 * tail_length
         dots = [
-            (cx + dist_base * math.cos(angle), cy + dist_base * math.sin(angle), rx * 0.12),
-            (cx + (dist_base + dist_step) * math.cos(angle), cy + (dist_base + dist_step) * math.sin(angle), rx * 0.08),
-            (cx + (dist_base + dist_step * 2.0) * math.cos(angle), cy + (dist_base + dist_step * 2.0) * math.sin(angle), rx * 0.045),
+            (edge_x + step * 0.40 * cos_a, edge_y + step * 0.40 * sin_a, bump_r * 0.55),
+            (edge_x + step * 1.05 * cos_a, edge_y + step * 1.05 * sin_a, bump_r * 0.35),
+            (edge_x + step * 1.60 * cos_a, edge_y + step * 1.60 * sin_a, bump_r * 0.20),
         ]
 
         draw = ImageDraw.Draw(canvas)
