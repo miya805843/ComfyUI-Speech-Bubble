@@ -10,7 +10,17 @@ Say goodbye to messy AI-generated "alien text"! With **ComfyUI-Speech-Bubble**, 
 
 ---
 
-### ✨ Key Features
+### 🎨 Preview
+
+<p align="center">
+  <img src="node.png" alt="ComfyUI Speech Bubble Node" width="400">
+</p>
+
+| Horizontal Dialogue (横書き) | Vertical Dialogue (縦書き) |
+| :---: | :---: |
+| ![Horizontal Speech Bubble Example](horizontal.png) | ![Vertical Speech Bubble Example](vertical.png) |
+
+---
 
 - **Vertical & Horizontal Top/Left-Aligned Layout**:
   - Full support for traditional Japanese vertical text (right-to-left columns, top-to-bottom reading).

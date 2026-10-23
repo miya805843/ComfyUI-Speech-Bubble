@@ -10,7 +10,17 @@ AIプロンプト指定で崩れてしまいがちな日本語のセリフや文
 
 ---
 
-### ✨ 主な機能
+### 🎨 表示例・プレビュー
+
+<p align="center">
+  <img src="node.png" alt="ComfyUI Speech Bubble Node" width="400">
+</p>
+
+| 横書き吹き出し例（Horizontal） | 縦書き吹き出し例（Vertical） |
+| :---: | :---: |
+| ![横書き吹き出し例](horizontal.png) | ![縦書き吹き出し例](vertical.png) |
+
+---
 
 - **縦書き・横書きの前揃えレイアウト**:
   - 伝統的な日本語漫画の「右上から左下」へ流れる縦書き組版を完全サポート。
