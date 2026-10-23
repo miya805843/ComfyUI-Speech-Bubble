@@ -259,12 +259,7 @@ class BubbleDrawer:
         if bubble_type == "rounded_rect":
             bubble_w = content_w + padding * 2
             bubble_h = content_h + padding * 2
-        elif bubble_type == "shout":
-            bubble_w = int(content_w * 1.45 + padding * 2)
-            bubble_h = int(content_h * 1.35 + padding * 2)
-            bubble_w = max(bubble_w, int(bubble_h * 0.65))
-            bubble_h = max(bubble_h, int(bubble_w * 0.65))
-        else:  # ellipse, thought
+        else:  # ellipse, thought, shout
             # 幾何学的に楕円の内側に矩形テキストが美しく収まる黄金比サイズ
             if direction == "horizontal":
                 # 横書き：主軸（横）は左右端の丸みを考慮して1.32倍、副軸（縦）は1.35倍
@@ -328,7 +323,7 @@ class BubbleDrawer:
         elif bubble_type == "thought":
             cls._draw_thought_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng, thought_bump_size)
         elif bubble_type == "shout":
-            cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng)
+            cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng, padding * scale)
 
         # 枠線（外側拡張下敷き方式で境界線の隙間を完全に排除）
         if sb_width > 0 and d_col[3] > 0:
@@ -458,36 +453,44 @@ class BubbleDrawer:
             draw.ellipse([bx - r, by - r, bx + r, by + r], fill=255)
 
     @classmethod
-    def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
-        """外枠サイズ内に収まる、ダイナミックな手描き叫びバブルを描画"""
+    def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random, scaled_padding: float):
+        """基準楕円から谷を0〜padding、山をpadding〜2*paddingの範囲でランダム配置する迫力ある叫びバブル"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
-        rx = (x1 - x0) / 2 * 0.78
-        ry = (y1 - y0) / 2 * 0.78
+        base_rx = (x1 - x0) / 2
+        base_ry = (y1 - y0) / 2
 
         points = []
-        num_spikes = rng.randint(22, 28)
+        num_spikes = rng.randint(22, 26)
         tail_angle = cls._get_tail_angle(tail_dir)
 
         for i in range(num_spikes * 2):
             base_angle = math.pi * i / num_spikes
-            angle = base_angle + rng.uniform(-0.04, 0.04)
-            is_outer = (i % 2 == 1)
+            angle = base_angle + rng.uniform(-0.03, 0.03)
+            is_peak = (i % 2 == 1)  # 奇数は山、偶数は谷
 
-            if is_outer:
-                rhythm = rng.uniform(0.95, 1.25)
-                mult = 1.15 * rhythm
+            cos_a = math.cos(angle)
+            sin_a = math.sin(angle)
 
-                ang_diff = abs((angle - tail_angle + math.pi) % (2 * math.pi) - math.pi)
-                if ang_diff < 0.28 and tail_dir != "none":
-                    mult = 1.20 + 0.85 * tail_length
+            if is_peak:
+                # 山（peak）: 基準円の円周から padding の 1.05倍 〜 2.00倍 外側
+                peak_dist = scaled_padding * rng.uniform(1.05, 2.00)
 
-                px = cx + rx * mult * math.cos(angle)
-                py = cy + ry * mult * math.sin(angle)
+                # しっぽ方向：最も近い山を中心に鋭く伸ばす
+                if tail_dir != "none" and tail_length > 0:
+                    ang_diff = abs((angle - tail_angle + math.pi) % (2 * math.pi) - math.pi)
+                    if ang_diff < 0.25:
+                        tail_factor = max(0.0, math.cos(ang_diff * (math.pi / 0.50)))
+                        peak_dist += max(base_rx, base_ry) * 0.90 * tail_length * tail_factor
+
+                px = cx + (base_rx + peak_dist) * cos_a
+                py = cy + (base_ry + peak_dist) * sin_a
             else:
-                inner_mult = rng.uniform(0.82, 0.92)
-                px = cx + rx * inner_mult * math.cos(angle)
-                py = cy + ry * inner_mult * math.sin(angle)
+                # 谷（valley）: 基準円の円周から 0 〜 padding の範囲
+                # 最小値でも基準円の円周上（テキストの外側）にとどまるため、文字への食い込みはゼロ！
+                valley_dist = scaled_padding * rng.uniform(0.10, 0.65)
+                px = cx + (base_rx + valley_dist) * cos_a
+                py = cy + (base_ry + valley_dist) * sin_a
 
             points.append((px, py))
 
