@@ -1,5 +1,2 @@
 Pillow>=9.5.0
 numpy>=1.23.0
-torch
-matplotlib>=3.5.0
-pytest>=7.0.0

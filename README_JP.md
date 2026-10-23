@@ -53,7 +53,7 @@ AIプロンプト指定で崩れてしまいがちな日本語のセリフや文
 ComfyUIの `custom_nodes` ディレクトリにクローンしてください：
 ```bash
 cd ComfyUI/custom_nodes/
-git clone https://github.com/<your-username>/ComfyUI-Speech-Bubble.git
+git clone https://github.com/miya805843/ComfyUI-Speech-Bubble.git
 ```
 その後、ComfyUIを起動（または再起動）してください。
 

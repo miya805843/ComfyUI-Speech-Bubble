@@ -53,7 +53,7 @@ Say goodbye to messy AI-generated "alien text"! With **ComfyUI-Speech-Bubble**, 
 Navigate to your ComfyUI `custom_nodes` directory:
 ```bash
 cd ComfyUI/custom_nodes/
-git clone https://github.com/<your-username>/ComfyUI-Speech-Bubble.git
+git clone https://github.com/miya805843/ComfyUI-Speech-Bubble.git
 ```
 Then restart ComfyUI.
 
