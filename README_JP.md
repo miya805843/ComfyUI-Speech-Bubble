@@ -75,7 +75,7 @@ git clone https://github.com/<your-username>/ComfyUI-Speech-Bubble.git
 | `padding` | `INT` | `24` | 文字と吹き出し境界の間のパディング（余白）。 |
 | `max_chars_per_line` | `INT` | `10` | 自動改行・改列を行う文字数制限。 |
 | `line_spacing` | `INT` | `6` | 行間または列間の余白。 |
-| `thought_bump_size` | `FLOAT` | `1.0` | 雲型（thought）のコブ（丸）の大きさ倍率（`0.2` 〜 `3.0`）。大きなふんわり雲から細かなモコモコまで自由に調整可能。 |
+| `thought_bump_size` | `FLOAT` | `1.0` | 雲型（thought）のコブ（丸）の大きさ、および叫び（shout）のトゲの山の高さ倍率（`0.2` 〜 `3.0`）。雲のモコモコ感や叫びのトゲトゲ度を自由に調整可能。 |
 | `opacity` | `FLOAT` | `1.0` | 吹き出し全体の不透明度（文字・枠線含む、`0.0` 〜 `1.0`）。 |
 | `seed` | `INT` | `0` | 雲型（thought）および叫び（shout）の形状ランダムシード。 |
 

@@ -323,7 +323,7 @@ class BubbleDrawer:
         elif bubble_type == "thought":
             cls._draw_thought_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng, thought_bump_size)
         elif bubble_type == "shout":
-            cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng, padding * scale)
+            cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng, padding * scale, thought_bump_size)
 
         # 枠線（外側拡張下敷き方式で境界線の隙間を完全に排除）
         if sb_width > 0 and d_col[3] > 0:
@@ -453,7 +453,7 @@ class BubbleDrawer:
             draw.ellipse([bx - r, by - r, bx + r, by + r], fill=255)
 
     @classmethod
-    def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random, scaled_padding: float):
+    def _draw_shout_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random, scaled_padding: float, spike_scale: float = 1.0):
         """基準楕円から谷を0〜padding、山をpadding〜2*paddingの範囲でランダム配置する迫力ある叫びバブル"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
@@ -473,8 +473,8 @@ class BubbleDrawer:
             sin_a = math.sin(angle)
 
             if is_peak:
-                # 山（peak）: 基準円の円周から padding の 1.05倍 〜 2.00倍 外側
-                peak_dist = scaled_padding * rng.uniform(1.05, 2.00)
+                # 山（peak）: 基準の山の高さを 1.25〜2.50 倍とし、spike_scale で自在に調整可能
+                peak_dist = scaled_padding * rng.uniform(1.25, 2.50) * max(0.1, spike_scale)
 
                 # しっぽ方向：最も近い山を中心に鋭く伸ばす
                 if tail_dir != "none" and tail_length > 0:
@@ -486,9 +486,8 @@ class BubbleDrawer:
                 px = cx + (base_rx + peak_dist) * cos_a
                 py = cy + (base_ry + peak_dist) * sin_a
             else:
-                # 谷（valley）: 基準円の円周から 0 〜 padding の範囲
-                # 最小値でも基準円の円周上（テキストの外側）にとどまるため、文字への食い込みはゼロ！
-                valley_dist = scaled_padding * rng.uniform(0.10, 0.65)
+                # 谷（valley）: 基準円の円周から 0 〜 0.60*padding（文字領域には絶対に入らない安全マージン）
+                valley_dist = scaled_padding * rng.uniform(0.10, 0.60)
                 px = cx + (base_rx + valley_dist) * cos_a
                 py = cy + (base_ry + valley_dist) * sin_a
 
