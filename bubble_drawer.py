@@ -259,12 +259,10 @@ class BubbleDrawer:
             bubble_w = content_w + padding * 2
             bubble_h = content_h + padding * 2
         elif bubble_type == "thought":
-            # 通常の楕円吹き出しと同様にパディングに忠実な基準楕円サイズ
-            bubble_w = int(content_w * 1.30 + padding * 2)
-            bubble_h = int(content_h * 1.20 + padding * 2)
-            # 極端な縦長・横長を防ぎ、雲型らしいふっくらした黄金比を維持
-            bubble_w = max(bubble_w, int(bubble_h * 0.55))
-            bubble_h = max(bubble_h, int(bubble_w * 0.55))
+            # 通常の楕円吹き出しと完全に同じ目標外枠サイズ
+            bubble_w = int(content_w * 1.35 + padding * 2)
+            bubble_h = int(content_h * 1.25 + padding * 2)
+            bubble_w = max(bubble_w, int(bubble_h * 0.65))
         elif bubble_type == "shout":
             bubble_w = int(content_w * 1.45 + padding * 2)
             bubble_h = int(content_h * 1.35 + padding * 2)
@@ -396,31 +394,36 @@ class BubbleDrawer:
 
     @classmethod
     def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
-        """基準楕円をベタ塗りし、その円周の少し内側を中心としてコブ（円）を全周配置する雲型描画"""
+        """コブの外縁が外枠サイズ（x0, y0, x1, y1）に一致する、モコモコ雲型を描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
-        rx = (x1 - x0) / 2
-        ry = (y1 - y0) / 2
+        target_rx = (x1 - x0) / 2
+        target_ry = (y1 - y0) / 2
+
+        # コブの数を程よく抑える（周長に応じて9〜12個程度。ふっくら大きなモコモコ感）
+        num_bumps = 10
+        perimeter = 2 * math.pi * math.sqrt((target_rx**2 + target_ry**2) / 2)
+        bump_r = (perimeter / num_bumps) * 0.60
+
+        # コブの外縁が target_rx, target_ry にピタリと収まるように基準楕円とオフセットを算出
+        outer_protrusion = bump_r * 0.30
+        base_rx = max(10, target_rx - outer_protrusion)
+        base_ry = max(10, target_ry - outer_protrusion)
+        bump_inset = bump_r * 0.70  # コブの中心を基準円周より深く内側に配置
 
         # 1. 基準楕円をベタ塗り（内部の隙間・穴あきを100%防止）
-        draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255)
+        draw.ellipse([cx - base_rx, cy - base_ry, cx + base_rx, cy + base_ry], fill=255)
 
-        # 2. コブの個数とサイズ設定（ふっくら大きなモコモコ感：周長に応じて11〜18個程度）
-        perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
-        num_bumps = max(11, min(18, int(perimeter / 72)))
-        bump_r = (perimeter / num_bumps) * 0.65
-        bump_inset = bump_r * 0.50  # 基準円周の内側に中心（外側に bump_r * 0.5 突き出る）
-
-        # 3. 楕円周上の弧長等間隔サンプリング
+        # 2. 基準楕円周上の弧長等間隔サンプリングでコブを配置
         samples = 1000
         angles_table = [0.0]
         total_arc = 0.0
-        prev_x = rx
+        prev_x = base_rx
         prev_y = 0.0
         for s in range(1, samples + 1):
             t = 2 * math.pi * s / samples
-            px = rx * math.cos(t)
-            py = ry * math.sin(t)
+            px = base_rx * math.cos(t)
+            py = base_ry * math.sin(t)
             total_arc += math.hypot(px - prev_x, py - prev_y)
             angles_table.append(total_arc)
             prev_x = px
@@ -439,11 +442,10 @@ class BubbleDrawer:
                     high = mid
             angle = 2 * math.pi * low / samples
 
-            # コブの中心は基準楕円の少し内側
-            bx = cx + (rx - bump_inset) * math.cos(angle)
-            by = cy + (ry - bump_inset) * math.sin(angle)
-            # 自然なランダム大小リズム（手描き雲の風合い）
-            r = bump_r * rng.uniform(0.92, 1.15)
+            # コブの中心を基準楕円の内側に配置
+            bx = cx + (base_rx - bump_inset) * math.cos(angle)
+            by = cy + (base_ry - bump_inset) * math.sin(angle)
+            r = bump_r * rng.uniform(0.95, 1.10)
             draw.ellipse([bx - r, by - r, bx + r, by + r], fill=255)
 
     @classmethod
@@ -492,19 +494,20 @@ class BubbleDrawer:
         cos_a = math.cos(angle)
         sin_a = math.sin(angle)
 
-        # 雲の外フチの座標を正確に算出（基準楕円 + コブの突起分）
+        num_bumps = 10
         perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
-        num_bumps = max(11, min(18, int(perimeter / 72)))
-        bump_r = (perimeter / num_bumps) * 0.65
+        bump_r = (perimeter / num_bumps) * 0.60
 
-        edge_x = cx + (rx + bump_r * 0.45) * cos_a
-        edge_y = cy + (ry + bump_r * 0.45) * sin_a
+        # 外縁座標（rx, ry）から出発
+        edge_x = cx + rx * cos_a
+        edge_y = cy + ry * sin_a
 
-        step = min(rx, ry) * 0.28 * tail_length
+        # 通常楕円のしっぽ先端と同じ到達距離にする
+        tail_reach = max(rx, ry) * tail_length
         dots = [
-            (edge_x + step * 0.50 * cos_a, edge_y + step * 0.50 * sin_a, bump_r * 0.40),
-            (edge_x + step * 1.05 * cos_a, edge_y + step * 1.05 * sin_a, bump_r * 0.25),
-            (edge_x + step * 1.55 * cos_a, edge_y + step * 1.55 * sin_a, bump_r * 0.15),
+            (edge_x + tail_reach * 0.20 * cos_a, edge_y + tail_reach * 0.20 * sin_a, bump_r * 0.40),
+            (edge_x + tail_reach * 0.55 * cos_a, edge_y + tail_reach * 0.55 * sin_a, bump_r * 0.26),
+            (edge_x + tail_reach * 0.90 * cos_a, edge_y + tail_reach * 0.90 * sin_a, bump_r * 0.16),
         ]
 
         draw = ImageDraw.Draw(canvas)
