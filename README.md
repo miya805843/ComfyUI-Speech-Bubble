@@ -75,6 +75,7 @@ Then restart ComfyUI.
 | `padding` | `INT` | `24` | Padding between text and bubble boundary. |
 | `max_chars_per_line` | `INT` | `10` | Automatic wrapping character limit per column/line. |
 | `line_spacing` | `INT` | `6` | Spacing between lines or vertical columns. |
+| `thought_bump_size` | `FLOAT` | `1.0` | Cloud bump (bubble) size multiplier (`0.2` to `3.0`). Adjusts cloud fluffiness from fine ripples to large puffy lobes. |
 | `opacity` | `FLOAT` | `1.0` | Overall opacity of the entire speech bubble and text (`0.0` to `1.0`). |
 | `seed` | `INT` | `0` | Random seed for thought (cloud) and shout (spike) procedural shapes. |
 

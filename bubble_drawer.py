@@ -239,6 +239,7 @@ class BubbleDrawer:
         padding: int = 24,
         max_chars_per_line: int = 12,
         line_spacing: int = 6,
+        thought_bump_size: float = 1.0,
         bubble_opacity: float = 1.0,
         opacity: float = 1.0,
         seed: int = 0,
@@ -258,20 +259,27 @@ class BubbleDrawer:
         if bubble_type == "rounded_rect":
             bubble_w = content_w + padding * 2
             bubble_h = content_h + padding * 2
-        elif bubble_type == "thought":
-            # 通常の楕円吹き出しと完全に同じ目標外枠サイズ
-            bubble_w = int(content_w * 1.35 + padding * 2)
-            bubble_h = int(content_h * 1.25 + padding * 2)
-            bubble_w = max(bubble_w, int(bubble_h * 0.65))
         elif bubble_type == "shout":
             bubble_w = int(content_w * 1.45 + padding * 2)
             bubble_h = int(content_h * 1.35 + padding * 2)
             bubble_w = max(bubble_w, int(bubble_h * 0.65))
             bubble_h = max(bubble_h, int(bubble_w * 0.65))
-        else:  # ellipse
-            bubble_w = int(content_w * 1.35 + padding * 2)
-            bubble_h = int(content_h * 1.25 + padding * 2)
-            bubble_w = max(bubble_w, int(bubble_h * 0.65))
+        else:  # ellipse, thought
+            # 幾何学的に楕円の内側に矩形テキストが美しく収まる黄金比サイズ
+            if direction == "horizontal":
+                # 横書き：主軸（横）は左右端の丸みを考慮して1.32倍、副軸（縦）は1.35倍
+                bubble_w = int(content_w * 1.32 + padding * 2)
+                bubble_h = int(content_h * 1.35 + padding * 2)
+                # 最小アスペクト比（極端な細長さを防ぎ、漫画らしいふっくら感を保つ）
+                bubble_h = max(bubble_h, int(bubble_w * 0.46), int(font.size * 3.2))
+                bubble_w = max(bubble_w, int(bubble_h * 1.15))
+            else:
+                # 縦書き：主軸（縦）は上下端の急な丸みで文字が詰まらないよう1.35倍、副軸（横）は1.32倍
+                bubble_h = int(content_h * 1.35 + padding * 2)
+                bubble_w = int(content_w * 1.32 + padding * 2)
+                # 最小アスペクト比（極端な細長さを防ぎ、漫画らしいふっくら感を保つ）
+                bubble_w = max(bubble_w, int(bubble_h * 0.46), int(font.size * 3.2))
+                bubble_h = max(bubble_h, int(bubble_w * 1.15))
 
         min_dim = int(font.size * 2.2)
         bubble_w = max(bubble_w, min_dim)
@@ -318,7 +326,7 @@ class BubbleDrawer:
         elif bubble_type == "rounded_rect":
             cls._draw_rounded_rect_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length)
         elif bubble_type == "thought":
-            cls._draw_thought_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng)
+            cls._draw_thought_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng, thought_bump_size)
         elif bubble_type == "shout":
             cls._draw_shout_silhouette(mask_draw, sbx0, sby0, sbx1, sby1, tail_direction, tail_length, rng)
 
@@ -336,7 +344,7 @@ class BubbleDrawer:
 
         # 思考バブル（モコモコ）のしっぽの小丸を描画
         if bubble_type == "thought" and tail_direction != "none":
-            cls._draw_thought_tail_dots(canvas, cx * scale, cy * scale, bubble_w * scale / 2, bubble_h * scale / 2, tail_direction, tail_length, b_col, d_col, sb_width, rng)
+            cls._draw_thought_tail_dots(canvas, cx * scale, cy * scale, bubble_w * scale / 2, bubble_h * scale / 2, tail_direction, tail_length, b_col, d_col, sb_width, rng, thought_bump_size)
 
         scaled_font = font
         try:
@@ -393,15 +401,16 @@ class BubbleDrawer:
                 draw.polygon(tail_points, fill=255)
 
     @classmethod
-    def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
+    def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random, bump_scale: float = 1.0):
         """コブの外縁が外枠サイズ（x0, y0, x1, y1）に一致する、モコモコ雲型を描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
         target_rx = (x1 - x0) / 2
         target_ry = (y1 - y0) / 2
 
-        # コブの数を程よく抑える（周長に応じて9〜12個程度。ふっくら大きなモコモコ感）
-        num_bumps = 10
+        # コブの数を bump_scale に応じて可変（1.0で標準10個、大きいと大ぶりモコモコ、小さいと細かめモコモコ）
+        base_num = 10
+        num_bumps = max(5, min(24, int(base_num / max(0.1, bump_scale))))
         perimeter = 2 * math.pi * math.sqrt((target_rx**2 + target_ry**2) / 2)
         bump_r = (perimeter / num_bumps) * 0.60
 
@@ -485,7 +494,7 @@ class BubbleDrawer:
         draw.polygon(points, fill=255)
 
     @classmethod
-    def _draw_thought_tail_dots(cls, canvas, cx, cy, rx, ry, tail_dir, tail_length, fill, outline, width, rng: random.Random):
+    def _draw_thought_tail_dots(cls, canvas, cx, cy, rx, ry, tail_dir, tail_length, fill, outline, width, rng: random.Random, bump_scale: float = 1.0):
         """思考バブルのしっぽ（雲のフチから直接連なる独立した小丸群）を描画"""
         if tail_length <= 0:
             return
@@ -494,7 +503,8 @@ class BubbleDrawer:
         cos_a = math.cos(angle)
         sin_a = math.sin(angle)
 
-        num_bumps = 10
+        base_num = 10
+        num_bumps = max(5, min(24, int(base_num / max(0.1, bump_scale))))
         perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
         bump_r = (perimeter / num_bumps) * 0.60
 

@@ -114,6 +114,13 @@ class SpeechBubbleNode:
                     "step": 0.05,
                     "display": "slider"
                 }),
+                "thought_bump_size": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.2,
+                    "max": 3.0,
+                    "step": 0.05,
+                    "display": "slider"
+                }),
                 "seed": ("INT", {
                     "default": 0,
                     "min": 0,
@@ -148,6 +155,7 @@ class SpeechBubbleNode:
         padding: int = 24,
         max_chars_per_line: int = 10,
         line_spacing: int = 6,
+        thought_bump_size: float = 1.0,
         opacity: float = 1.0,
         seed: int = 0,
     ):
@@ -185,6 +193,7 @@ class SpeechBubbleNode:
                 padding=padding,
                 max_chars_per_line=max_chars_per_line,
                 line_spacing=line_spacing,
+                thought_bump_size=thought_bump_size,
                 bubble_opacity=bubble_opacity,
                 opacity=opacity,
                 seed=current_seed,
