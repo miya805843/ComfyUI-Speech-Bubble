@@ -259,10 +259,12 @@ class BubbleDrawer:
             bubble_w = content_w + padding * 2
             bubble_h = content_h + padding * 2
         elif bubble_type == "thought":
-            bubble_w = int(content_w + padding * 2 + font.size * 1.8)
-            bubble_h = int(content_h + padding * 2 + font.size * 1.8)
-            bubble_w = max(bubble_w, int(bubble_h * 1.15))
-            bubble_h = max(bubble_h, int(bubble_w * 0.52))
+            # 通常の楕円吹き出しと同様にパディングに忠実な基準楕円サイズ
+            bubble_w = int(content_w * 1.30 + padding * 2)
+            bubble_h = int(content_h * 1.20 + padding * 2)
+            # 極端な縦長・横長を防ぎ、雲型らしいふっくらした黄金比を維持
+            bubble_w = max(bubble_w, int(bubble_h * 0.55))
+            bubble_h = max(bubble_h, int(bubble_w * 0.55))
         elif bubble_type == "shout":
             bubble_w = int(content_w * 1.45 + padding * 2)
             bubble_h = int(content_h * 1.35 + padding * 2)
@@ -394,24 +396,22 @@ class BubbleDrawer:
 
     @classmethod
     def _draw_thought_silhouette(cls, draw, x0, y0, x1, y1, tail_dir, tail_length, rng: random.Random):
-        """弧長等間隔サンプリングにより、アスペクト比を問わず楕円の凹みや平坦線が出ないふっくら雲型を描画"""
+        """基準楕円をベタ塗りし、その円周の少し内側を中心としてコブ（円）を全周配置する雲型描画"""
         cx = (x0 + x1) / 2
         cy = (y0 + y1) / 2
-        w = x1 - x0
-        h = y1 - y0
+        rx = (x1 - x0) / 2
+        ry = (y1 - y0) / 2
 
-        bump_r = min(w, h) * 0.18
-        rx = (w - bump_r * 2) / 2
-        ry = (h - bump_r * 2) / 2
+        # 1. 基準楕円をベタ塗り（内部の隙間・穴あきを100%防止）
+        draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255)
 
-        # 内側楕円（中央の穴埋め用：コブの谷間から絶対に露出しないよう小さめ0.70にする）
-        draw.ellipse([cx - rx * 0.70, cy - ry * 0.70, cx + rx * 0.70, cy + ry * 0.70], fill=255)
-
-        # 楕円周長を計算し、コブ同士が半分以上重なり合うように配置（間隔 = bump_r * 1.15）
+        # 2. コブの個数とサイズ設定（ふっくら大きなモコモコ感：周長に応じて11〜18個程度）
         perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
-        num_bumps = max(14, int(perimeter / (bump_r * 1.15)))
+        num_bumps = max(11, min(18, int(perimeter / 72)))
+        bump_r = (perimeter / num_bumps) * 0.65
+        bump_inset = bump_r * 0.50  # 基準円周の内側に中心（外側に bump_r * 0.5 突き出る）
 
-        # 弧長に沿った等間隔角度テーブルを生成（楕円パラメータtの等分による偏りを排除）
+        # 3. 楕円周上の弧長等間隔サンプリング
         samples = 1000
         angles_table = [0.0]
         total_arc = 0.0
@@ -437,14 +437,13 @@ class BubbleDrawer:
                     low = mid + 1
                 else:
                     high = mid
-            t = 2 * math.pi * low / samples
+            angle = 2 * math.pi * low / samples
 
+            # コブの中心は基準楕円の少し内側
+            bx = cx + (rx - bump_inset) * math.cos(angle)
+            by = cy + (ry - bump_inset) * math.sin(angle)
             # 自然なランダム大小リズム（手描き雲の風合い）
-            size_mod = 1.0 + 0.16 * math.sin(t * 3.0 + 0.4) + rng.uniform(-0.05, 0.05)
-            r = bump_r * size_mod
-
-            bx = cx + rx * math.cos(t)
-            by = cy + ry * math.sin(t)
+            r = bump_r * rng.uniform(0.92, 1.15)
             draw.ellipse([bx - r, by - r, bx + r, by + r], fill=255)
 
     @classmethod
@@ -493,16 +492,19 @@ class BubbleDrawer:
         cos_a = math.cos(angle)
         sin_a = math.sin(angle)
 
-        bump_r = min(rx, ry) * 0.36
-        # 雲の外フチの座標を正確に算出
-        edge_x = cx + (rx + bump_r * 0.75) * cos_a
-        edge_y = cy + (ry + bump_r * 0.75) * sin_a
+        # 雲の外フチの座標を正確に算出（基準楕円 + コブの突起分）
+        perimeter = 2 * math.pi * math.sqrt((rx**2 + ry**2) / 2)
+        num_bumps = max(11, min(18, int(perimeter / 72)))
+        bump_r = (perimeter / num_bumps) * 0.65
 
-        step = min(rx, ry) * 0.32 * tail_length
+        edge_x = cx + (rx + bump_r * 0.45) * cos_a
+        edge_y = cy + (ry + bump_r * 0.45) * sin_a
+
+        step = min(rx, ry) * 0.28 * tail_length
         dots = [
-            (edge_x + step * 0.40 * cos_a, edge_y + step * 0.40 * sin_a, bump_r * 0.55),
-            (edge_x + step * 1.05 * cos_a, edge_y + step * 1.05 * sin_a, bump_r * 0.35),
-            (edge_x + step * 1.60 * cos_a, edge_y + step * 1.60 * sin_a, bump_r * 0.20),
+            (edge_x + step * 0.50 * cos_a, edge_y + step * 0.50 * sin_a, bump_r * 0.40),
+            (edge_x + step * 1.05 * cos_a, edge_y + step * 1.05 * sin_a, bump_r * 0.25),
+            (edge_x + step * 1.55 * cos_a, edge_y + step * 1.55 * sin_a, bump_r * 0.15),
         ]
 
         draw = ImageDraw.Draw(canvas)
