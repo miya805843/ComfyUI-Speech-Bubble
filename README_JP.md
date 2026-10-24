@@ -10,11 +10,7 @@ AIプロンプト指定で崩れてしまいがちな日本語のセリフや文
 
 ---
 
-### 🎨 表示例・プレビュー
-
-<p align="center">
-  <img src="node.png" alt="ComfyUI Speech Bubble Node" width="400">
-</p>
+### 表示例・プレビュー
 
 | 横書き吹き出し例（Horizontal） | 縦書き吹き出し例（Vertical） |
 | :---: | :---: |
@@ -47,7 +43,7 @@ AIプロンプト指定で崩れてしまいがちな日本語のセリフや文
 
 ---
 
-### 📦 インストール方法
+### インストール方法
 
 #### Git Clone によるインストール
 ComfyUIの `custom_nodes` ディレクトリにクローンしてください：
@@ -64,7 +60,11 @@ git clone https://github.com/miya805843/ComfyUI-Speech-Bubble.git
 
 ---
 
-### ⚙️ ノードパラメータ一覧
+### ノードパラメータ一覧
+
+<p align="center">
+  <img src="node.png" alt="ComfyUI Speech Bubble Node" width="400">
+</p>
 
 | パラメータ名 | 型 | デフォルト値 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -91,6 +91,6 @@ git clone https://github.com/miya805843/ComfyUI-Speech-Bubble.git
 
 ---
 
-### 📄 ライセンス
+### ライセンス
 
 本プロジェクトは [MIT License](LICENSE) の下で公開されています。

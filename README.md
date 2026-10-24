@@ -10,11 +10,7 @@ Say goodbye to messy AI-generated "alien text"! With **ComfyUI-Speech-Bubble**, 
 
 ---
 
-### 🎨 Preview
-
-<p align="center">
-  <img src="node.png" alt="ComfyUI Speech Bubble Node" width="400">
-</p>
+### Preview
 
 | Horizontal Dialogue (横書き) | Vertical Dialogue (縦書き) |
 | :---: | :---: |
@@ -47,7 +43,7 @@ Say goodbye to messy AI-generated "alien text"! With **ComfyUI-Speech-Bubble**, 
 
 ---
 
-### 📦 Installation
+### Installation
 
 #### Via Git Clone
 Navigate to your ComfyUI `custom_nodes` directory:
@@ -64,7 +60,11 @@ Then restart ComfyUI.
 
 ---
 
-### ⚙️ Node Parameters
+### Node Parameters
+
+<p align="center">
+  <img src="node.png" alt="ComfyUI Speech Bubble Node" width="400">
+</p>
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
@@ -91,6 +91,6 @@ Then restart ComfyUI.
 
 ---
 
-### 📄 License
+### License
 
 This project is licensed under the [MIT License](LICENSE).
