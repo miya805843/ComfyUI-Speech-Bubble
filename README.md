@@ -6,7 +6,7 @@
 
 A versatile, high-quality custom node for **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** that overlays comic/manga speech bubbles and text onto generated images in post-processing.
 
-Say goodbye to messy AI-generated "alien text"! With **ComfyUI-Speech-Bubble**, you can easily embed readable, beautifully rendered Japanese dialogue (vertical & horizontal) or multi-language text, thought balloons, shout bubbles, and narration boxes directly after image generation.
+You can easily embed readable, beautifully rendered Japanese dialogue (vertical & horizontal) or multi-language text, thought balloons, shout bubbles, and narration boxes directly after image generation.
 
 ---
 
