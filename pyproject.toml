@@ -1,0 +1,17 @@
+[project]
+name = "comfyui-speech-bubble"
+description = "Composite customizable speech bubbles and Japanese/multilingual text onto images in ComfyUI."
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = [
+    "Pillow>=9.5.0",
+    "numpy>=1.23.0",
+]
+
+[project.urls]
+Repository = "https://github.com/miya805843/ComfyUI-Speech-Bubble"
+
+[tool.comfy]
+PublisherId = "miya805843"
+DisplayName = "ComfyUI Speech Bubble"
+Icon = "https://raw.githubusercontent.com/miya805843/ComfyUI-Speech-Bubble/main/node.png"
