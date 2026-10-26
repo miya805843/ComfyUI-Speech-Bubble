@@ -4,9 +4,7 @@
 
 ---
 
-A versatile, high-quality custom node for **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** that overlays comic/manga speech bubbles and text onto generated images in post-processing.
-
-You can easily embed readable, beautifully rendered Japanese dialogue (vertical & horizontal) or multi-language text, thought balloons, shout bubbles, and narration boxes directly after image generation.
+A custom node for **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** that overlays comic/manga speech bubbles and text onto generated images.
 
 ---
 
@@ -18,34 +16,33 @@ You can easily embed readable, beautifully rendered Japanese dialogue (vertical 
 
 ---
 
-- **Vertical & Horizontal Top/Left-Aligned Layout**:
-  - Full support for traditional Japanese vertical text (right-to-left columns, top-to-bottom reading).
-  - **Top-aligned (vertical)** and **left-aligned (horizontal)** text positioning, allowing you to easily adjust indentation and line drops simply by inserting full-width spaces (`　`) or blank lines.
-  - Pixel-perfect punctuation snapping: Automatically anchors Japanese commas (`、`) and periods (`。`) to the lower-right corner of the preceding character, ensuring authentic manga typesetting across all fonts.
-  - Automatic 90-degree rotation for brackets (`（）`, `「」`), dashes, and long sound marks (`ー`).
-- **4 Manga Bubble Styles with Procedural Randomization**:
-  - `ellipse`: Classic smooth speech balloon.
-  - `rounded_rect`: Narration box or modern chat bubble.
-  - `thought`: Fluffy cloud-like thought balloon with trailing floating dots.
-  - `shout`: Dynamic explosion balloon with sharp, hand-drawn manga flash spikes.
-  - **Procedural Seed Control**: Use the `seed` parameter with ComfyUI's native randomize feature to generate unique organic cloud shapes and spike bursts on every run!
-- **Tail Direction and Length Control**:
-  - Point the tail toward the speaker's mouth (`bottom_left`, `bottom_right`, `top_left`, `top_right`, or `none`).
-  - Use the `tail_length` slider to reach distant characters smoothly.
-- **Independent Bubble Opacity**:
-  - Adjust `bubble_opacity` to make the bubble background semi-transparent while keeping text and border outlines 100% crisp and readable.
-- **True Font Name Auto-Detection**:
-  - Directly inspects TrueType/OpenType binary metadata (Name Table) to display official localized font family names (e.g., `源暎アンチック v5`, `07やさしさアンチック`, `游ゴシック`, `ＭＳ ゴシック`) instead of raw filenames.
-  - Automatically discovers installed system fonts on **Windows**, **macOS**, and **Linux**.
-  - Drop your favorite manga fonts (`.ttf`, `.otf`, `.ttc`) into the local `fonts/` folder to use them instantly.
+- **Vertical & Horizontal Layout**:
+  - Supports Japanese vertical text (right-to-left columns) and horizontal text.
+  - Top-aligned (vertical) and left-aligned (horizontal) positioning. Indentation can be adjusted with full-width spaces (`　`) or spaces.
+  - Punctuation adjustment: Positions commas (`、`) and periods (`。`) to the lower-right of the preceding character for horizontal fonts in vertical mode.
+  - Automatic rotation for brackets (`（）`, `「」`), dashes, and prolonged sound marks (`ー`).
+- **4 Bubble Styles**:
+  - `ellipse`: Elliptical speech balloon.
+  - `rounded_rect`: Rounded rectangle (narration box).
+  - `thought`: Cloud shape with thought dots.
+  - `shout`: Spiked burst bubble.
+  - `seed`: Parameter to vary cloud and spike shapes (supports ComfyUI's `control_after_generate`).
+- **Tail Direction and Length**:
+  - Direction: `bottom_left`, `bottom_right`, `top_left`, `top_right`, or `none`.
+  - `tail_length`: Adjusts the tail length multiplier.
+- **Bubble Background Opacity**:
+  - `bubble_opacity`: Adjusts background transparency while keeping text and border outlines opaque.
+- **Font Name Detection & Custom Fonts**:
+  - Parses font metadata (Name Table) to display localized font family names.
+  - Automatically detects system fonts on Windows, macOS, and Linux.
+  - Supports custom fonts placed in the `fonts/` directory (`.ttf`, `.otf`, etc.).
 - **Text Stroke / Outline (袋文字)**:
-  - Add stylized outlines to your text using `text_border_width` and `text_border_color`.
-  - Works seamlessly with both horizontal and vertical text layouts (including rotated punctuation, prolonged sound marks, and small kana), dramatically boosting readability and comic appeal.
-- **Real-Time Color Swatch Previews**:
-  - Automatically renders live color swatch previews directly on the right side of `text_color`, `text_border_color`, `bubble_color`, and `bubble_border_color` widgets.
-  - Instantly visualize configured colors without having to guess from raw HEX codes.
-- **Ultra-Crisp Anti-Aliasing**:
-  - Rendered with 2x supersampling and downscaled with the Lanczos filter for smooth outlines without jagged pixels.
+  - `text_border_width` and `text_border_color` add an outline around characters.
+  - Supports both vertical and horizontal text layouts.
+- **Color Preview Swatches**:
+  - Displays color preview swatches next to `text_color`, `text_border_color`, `bubble_color`, and `bubble_border_color` input widgets.
+- **Anti-Aliasing**:
+  - 2x supersampling with Lanczos downsampling.
 
 ---
 
@@ -92,7 +89,7 @@ Then restart ComfyUI.
 | `padding` | `INT` | `24` | Padding between text and bubble boundary. |
 | `max_chars_per_line` | `INT` | `10` | Automatic wrapping character limit per column/line. |
 | `line_spacing` | `INT` | `6` | Spacing between lines or vertical columns. |
-| `thought_bump_size` | `FLOAT` | `1.0` | Size multiplier for thought (cloud) bumps and shout (spike) peak heights (`0.2` to `3.0`). Adjusts cloud fluffiness or shout spike intensity. |
+| `thought_bump_size` | `FLOAT` | `1.0` | Size multiplier for thought (cloud) bumps and shout (spike) heights (`0.2` to `3.0`). |
 | `seed` | `INT` | `0` | Random seed for procedural shapes (supports `control_after_generate`). |
 | `bubble_opacity`| `FLOAT` | `1.0` | (Optional) Background opacity (`0.0` to `1.0`) to reveal hair or background through the bubble. |
 | `opacity` | `FLOAT` | `1.0` | (Optional) Overall opacity of the entire speech bubble and text (`0.0` to `1.0`). |
