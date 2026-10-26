@@ -126,12 +126,16 @@ class BubbleDrawer:
         direction: str,
         text_color: Tuple[int, int, int, int],
         max_chars_per_line: int,
-        line_spacing: int
+        line_spacing: int,
+        text_border_width: int = 0,
+        text_border_color: Optional[Tuple[int, int, int, int]] = None
     ):
-        """テキストを描画（前揃え／上揃え・左揃えに対応し空白調整を容易に）"""
+        """テキストを描画（前揃え／上揃え・左揃えに対応し空白調整を容易に、文字縁取り対応）"""
         x0, y0, x1, y1 = text_bbox
         box_w = x1 - x0
         box_h = y1 - y0
+
+        has_stroke = text_border_width > 0 and text_border_color is not None
 
         if direction == "horizontal":
             lines, content_w, content_h = cls.layout_horizontal(text, font, max_chars_per_line, line_spacing)
@@ -142,7 +146,10 @@ class BubbleDrawer:
                 line_bbox = draw.textbbox((0, 0), line if line else " ", font=font)
                 line_h = line_bbox[3] - line_bbox[1]
                 cur_x = x0
-                draw.text((cur_x, cur_y), line, fill=text_color, font=font)
+                if has_stroke:
+                    draw.text((cur_x, cur_y), line, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                else:
+                    draw.text((cur_x, cur_y), line, fill=text_color, font=font)
                 cur_y += line_h + line_spacing
 
         else:
@@ -162,9 +169,14 @@ class BubbleDrawer:
                 for ch in col:
                     if ch in cls.PUNCTUATION_CHARS:
                         # 句読点（、。）: 実インク領域を精密に取得し、文字セルの右上に確実に吸着
-                        temp_img = Image.new("RGBA", (char_cell * 2, char_cell * 2), (0, 0, 0, 0))
+                        buf_size = char_cell * 2 + text_border_width * 4
+                        temp_img = Image.new("RGBA", (buf_size, buf_size), (0, 0, 0, 0))
                         td = ImageDraw.Draw(temp_img)
-                        td.text((char_cell // 2, char_cell // 2), ch, fill=text_color, font=font)
+                        center_pt = buf_size // 4
+                        if has_stroke:
+                            td.text((center_pt, center_pt), ch, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                        else:
+                            td.text((center_pt, center_pt), ch, fill=text_color, font=font)
                         ink_bbox = temp_img.getbbox()
                         if ink_bbox:
                             glyph_crop = temp_img.crop(ink_bbox)
@@ -174,7 +186,10 @@ class BubbleDrawer:
                             target_y = cur_y + int(char_cell * 0.08)
                             canvas.paste(glyph_crop, (target_x, target_y), glyph_crop)
                         else:
-                            draw.text((col_x, cur_y), ch, fill=text_color, font=font)
+                            if has_stroke:
+                                draw.text((col_x, cur_y), ch, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                            else:
+                                draw.text((col_x, cur_y), ch, fill=text_color, font=font)
                         cur_y += int(char_cell * 0.55)
 
                     elif ch in cls.SMALL_CHARS:
@@ -184,7 +199,10 @@ class BubbleDrawer:
                         ch_h = actual_bbox[3] - actual_bbox[1]
                         px = col_x + (char_cell - cw) // 2 + int(char_cell * 0.15)
                         py = cur_y + (char_cell - ch_h) // 2 - int(char_cell * 0.08)
-                        draw.text((px, py), ch, fill=text_color, font=font)
+                        if has_stroke:
+                            draw.text((px, py), ch, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                        else:
+                            draw.text((px, py), ch, fill=text_color, font=font)
                         cur_y += char_cell
 
                     elif ch in cls.ROTATE_CHARS:
@@ -196,16 +214,22 @@ class BubbleDrawer:
                             ch_h = actual_bbox[3] - actual_bbox[1]
                             px = col_x + (char_cell - cw) // 2
                             py = cur_y + (char_cell - ch_h) // 2
-                            draw.text((px, py), draw_ch, fill=text_color, font=font)
+                            if has_stroke:
+                                draw.text((px, py), draw_ch, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                            else:
+                                draw.text((px, py), draw_ch, fill=text_color, font=font)
                         else:
-                            pad = max(10, char_cell // 2)
+                            pad = max(10, char_cell // 2) + text_border_width * 2
                             tw = char_cell + pad * 2
                             ch_img = Image.new("RGBA", (tw, tw), (0, 0, 0, 0))
                             cd = ImageDraw.Draw(ch_img)
                             cb = cd.textbbox((0, 0), ch, font=font)
                             cw = cb[2] - cb[0]
                             ch_h = cb[3] - cb[1]
-                            cd.text(((tw - cw) // 2 - cb[0], (tw - ch_h) // 2 - cb[1]), ch, fill=text_color, font=font)
+                            if has_stroke:
+                                cd.text(((tw - cw) // 2 - cb[0], (tw - ch_h) // 2 - cb[1]), ch, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                            else:
+                                cd.text(((tw - cw) // 2 - cb[0], (tw - ch_h) // 2 - cb[1]), ch, fill=text_color, font=font)
                             rot_ch = ch_img.rotate(-90, resample=Image.Resampling.BILINEAR)
                             target_x = col_x + (char_cell - tw) // 2
                             target_y = cur_y + (char_cell - tw) // 2
@@ -218,7 +242,10 @@ class BubbleDrawer:
                         ch_h = actual_bbox[3] - actual_bbox[1]
                         px = col_x + (char_cell - cw) // 2
                         py = cur_y + (char_cell - ch_h) // 2
-                        draw.text((px, py), ch, fill=text_color, font=font)
+                        if has_stroke:
+                            draw.text((px, py), ch, fill=text_color, font=font, stroke_width=text_border_width, stroke_fill=text_border_color)
+                        else:
+                            draw.text((px, py), ch, fill=text_color, font=font)
                         cur_y += char_cell
 
     @classmethod
@@ -243,6 +270,8 @@ class BubbleDrawer:
         bubble_opacity: float = 1.0,
         opacity: float = 1.0,
         seed: int = 0,
+        text_border_color: str = "#FFFFFF",
+        text_border_width: int = 0,
     ) -> Image.Image:
         """高品質な吹き出し画像を生成（透明背景RGBA）"""
         img_w, img_h = image_size
@@ -291,6 +320,7 @@ class BubbleDrawer:
         b_col_raw = cls.parse_color(bubble_color, (255, 255, 255, 255))
         d_col_raw = cls.parse_color(border_color, (0, 0, 0, 255))
         t_col_raw = cls.parse_color(text_color, (0, 0, 0, 255))
+        tb_col_raw = cls.parse_color(text_border_color, (255, 255, 255, 255))
 
         b_alpha = int(b_col_raw[3] * bubble_opacity * opacity)
         b_col = (b_col_raw[0], b_col_raw[1], b_col_raw[2], max(0, min(255, b_alpha)))
@@ -300,6 +330,9 @@ class BubbleDrawer:
 
         t_alpha = int(t_col_raw[3] * opacity)
         t_col = (t_col_raw[0], t_col_raw[1], t_col_raw[2], max(0, min(255, t_alpha)))
+
+        tb_alpha = int(tb_col_raw[3] * opacity)
+        tb_col = (tb_col_raw[0], tb_col_raw[1], tb_col_raw[2], max(0, min(255, tb_alpha)))
 
         canvas_w = img_w * scale
         canvas_h = img_h * scale
@@ -355,6 +388,8 @@ class BubbleDrawer:
         ty1 = ty0 + content_h * scale
         text_bbox = (tx0, ty0, tx1, ty1)
 
+        scaled_text_border_width = text_border_width * scale
+
         cls.draw_text_content(
             canvas,
             draw,
@@ -364,7 +399,9 @@ class BubbleDrawer:
             direction,
             t_col,
             max_chars_per_line,
-            line_spacing * scale
+            line_spacing * scale,
+            text_border_width=scaled_text_border_width,
+            text_border_color=tb_col
         )
 
         result = canvas.resize((img_w, img_h), Image.Resampling.LANCZOS)

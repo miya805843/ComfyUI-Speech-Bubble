@@ -38,6 +38,9 @@ You can easily embed readable, beautifully rendered Japanese dialogue (vertical 
   - Directly inspects TrueType/OpenType binary metadata (Name Table) to display official localized font family names (e.g., `源暎アンチック v5`, `07やさしさアンチック`, `游ゴシック`, `ＭＳ ゴシック`) instead of raw filenames.
   - Automatically discovers installed system fonts on **Windows**, **macOS**, and **Linux**.
   - Drop your favorite manga fonts (`.ttf`, `.otf`, `.ttc`) into the local `fonts/` folder to use them instantly.
+- **Text Stroke / Outline (袋文字)**:
+  - Add stylized outlines to your text using `text_border_width` and `text_border_color`.
+  - Works seamlessly with both horizontal and vertical text layouts (including rotated punctuation, prolonged sound marks, and small kana), dramatically boosting readability and comic appeal.
 - **Ultra-Crisp Anti-Aliasing**:
   - Rendered with 2x supersampling and downscaled with the Lanczos filter for smooth outlines without jagged pixels.
 
@@ -87,6 +90,8 @@ Then restart ComfyUI.
 | `line_spacing` | `INT` | `6` | Spacing between lines or vertical columns. |
 | `thought_bump_size` | `FLOAT` | `1.0` | Size multiplier for thought (cloud) bumps and shout (spike) peak heights (`0.2` to `3.0`). Adjusts cloud fluffiness or shout spike intensity. |
 | `opacity` | `FLOAT` | `1.0` | Overall opacity of the entire speech bubble and text (`0.0` to `1.0`). |
+| `text_border_color` | `STRING` | `#FFFFFF` | Color of the text outline/stroke. |
+| `text_border_width` | `INT` | `0` | Outline/stroke thickness in pixels. Set to `0` for no outline. |
 | `seed` | `INT` | `0` | Random seed for thought (cloud) and shout (spike) procedural shapes. |
 
 ---

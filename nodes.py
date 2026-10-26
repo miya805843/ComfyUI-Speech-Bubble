@@ -121,6 +121,15 @@ class SpeechBubbleNode:
                     "step": 0.05,
                     "display": "slider"
                 }),
+                "text_border_color": ("STRING", {
+                    "default": "#FFFFFF"
+                }),
+                "text_border_width": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 30,
+                    "step": 1
+                }),
                 "seed": ("INT", {
                     "default": 0,
                     "min": 0,
@@ -157,6 +166,8 @@ class SpeechBubbleNode:
         line_spacing: int = 6,
         thought_bump_size: float = 1.0,
         opacity: float = 1.0,
+        text_border_color: str = "#FFFFFF",
+        text_border_width: int = 0,
         seed: int = 0,
     ):
         if torch is None:
@@ -196,6 +207,8 @@ class SpeechBubbleNode:
                 thought_bump_size=thought_bump_size,
                 bubble_opacity=bubble_opacity,
                 opacity=opacity,
+                text_border_color=text_border_color,
+                text_border_width=text_border_width,
                 seed=current_seed,
             )
 
