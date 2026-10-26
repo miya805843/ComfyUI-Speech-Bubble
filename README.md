@@ -84,8 +84,8 @@ Then restart ComfyUI.
 | `text_border_width` | `INT` | `0` | Outline/stroke thickness in pixels. Set to `0` for no outline. |
 | `text_border_color` | `STRING` | `#FFFFFF` | Color of the text outline/stroke. |
 | `bubble_color` | `STRING` | `#FFFFFF` | Hex code or color name for the bubble background. |
-| `bubble_border_color` | `STRING` | `#000000` | Outline border color for the bubble. |
 | `bubble_border_width` | `INT` | `3` | Border thickness for the bubble in pixels. |
+| `bubble_border_color` | `STRING` | `#000000` | Outline border color for the bubble. |
 | `padding` | `INT` | `24` | Padding between text and bubble boundary. |
 | `max_chars_per_line` | `INT` | `10` | Automatic wrapping character limit per column/line. |
 | `line_spacing` | `INT` | `6` | Spacing between lines or vertical columns. |

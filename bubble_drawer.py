@@ -263,8 +263,8 @@ class BubbleDrawer:
         text_border_width: int = 0,
         text_border_color: str = "#FFFFFF",
         bubble_color: str = "#FFFFFF",
-        bubble_border_color: str = "#000000",
         bubble_border_width: int = 3,
+        bubble_border_color: str = "#000000",
         padding: int = 24,
         max_chars_per_line: int = 12,
         line_spacing: int = 6,
@@ -272,15 +272,8 @@ class BubbleDrawer:
         bubble_opacity: float = 1.0,
         opacity: float = 1.0,
         seed: int = 0,
-        border_color: Optional[str] = None,
-        border_width: Optional[int] = None,
-        **kwargs
     ) -> Image.Image:
         """高品質な吹き出し画像を生成（透明背景RGBA）"""
-        # 旧パラメータ名のフォールバック
-        actual_border_color = border_color if border_color is not None else bubble_border_color
-        actual_border_width = border_width if border_width is not None else bubble_border_width
-
         img_w, img_h = image_size
         scale = 2  # アンチエイリアス用のオーバーサンプリング倍率
         rng = random.Random(seed)
@@ -325,7 +318,7 @@ class BubbleDrawer:
         by1 = by0 + bubble_h
 
         b_col_raw = cls.parse_color(bubble_color, (255, 255, 255, 255))
-        d_col_raw = cls.parse_color(actual_border_color, (0, 0, 0, 255))
+        d_col_raw = cls.parse_color(bubble_border_color, (0, 0, 0, 255))
         t_col_raw = cls.parse_color(text_color, (0, 0, 0, 255))
         tb_col_raw = cls.parse_color(text_border_color, (255, 255, 255, 255))
 
@@ -350,7 +343,7 @@ class BubbleDrawer:
         sbx1, sby1 = bx1 * scale, by1 * scale
         scx, scy = cx * scale, cy * scale
         sbw, sbh = bubble_w * scale, bubble_h * scale
-        sb_width = actual_border_width * scale
+        sb_width = bubble_border_width * scale
 
         shape_mask = Image.new("L", (canvas_w, canvas_h), 0)
         mask_draw = ImageDraw.Draw(shape_mask)

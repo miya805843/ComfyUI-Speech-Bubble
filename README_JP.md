@@ -83,8 +83,8 @@ git clone https://github.com/miya805843/ComfyUI-Speech-Bubble.git
 | `text_border_width` | `INT` | `0` | 文字の縁取りの太さ（ピクセル単位）。`0` で縁取りなし。 |
 | `text_border_color` | `STRING` | `#FFFFFF` | 文字の縁取り（袋文字）の色。 |
 | `bubble_color` | `STRING` | `#FFFFFF` | 吹き出し背景色。 |
-| `bubble_border_color` | `STRING` | `#000000` | 吹き出し枠線の色。 |
 | `bubble_border_width` | `INT` | `3` | 吹き出し枠線の太さ（ピクセル単位）。 |
+| `bubble_border_color` | `STRING` | `#000000` | 吹き出し枠線の色。 |
 | `padding` | `INT` | `24` | 文字と吹き出し境界の間のパディング（余白）。 |
 | `max_chars_per_line` | `INT` | `10` | 自動改行・改列を行う文字数制限。 |
 | `line_spacing` | `INT` | `6` | 行間または列間の余白。 |

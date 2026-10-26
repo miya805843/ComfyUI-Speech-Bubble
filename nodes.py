@@ -80,14 +80,14 @@ class SpeechBubbleNode:
                 "bubble_color": ("STRING", {
                     "default": "#FFFFFF"
                 }),
-                "bubble_border_color": ("STRING", {
-                    "default": "#000000"
-                }),
                 "bubble_border_width": ("INT", {
                     "default": 3,
                     "min": 0,
                     "max": 30,
                     "step": 1
+                }),
+                "bubble_border_color": ("STRING", {
+                    "default": "#000000"
                 }),
                 "padding": ("INT", {
                     "default": 24,
@@ -136,13 +136,6 @@ class SpeechBubbleNode:
                     "step": 0.05,
                     "display": "slider"
                 }),
-                # 旧パラメータ名との後方互換性用
-                "border_color": ("STRING", {
-                    "default": ""
-                }),
-                "border_width": ("INT", {
-                    "default": -1
-                }),
             }
         }
 
@@ -167,8 +160,8 @@ class SpeechBubbleNode:
         text_border_width: int,
         text_border_color: str,
         bubble_color: str,
-        bubble_border_color: str,
         bubble_border_width: int,
+        bubble_border_color: str,
         padding: int,
         max_chars_per_line: int,
         line_spacing: int,
@@ -176,16 +169,9 @@ class SpeechBubbleNode:
         seed: int,
         bubble_opacity: float = 1.0,
         opacity: float = 1.0,
-        border_color: str = "",
-        border_width: int = -1,
-        **kwargs
     ):
         if torch is None:
             raise RuntimeError("PyTorchがインストールされていません。")
-
-        # 旧パラメータ名のフォールバック
-        actual_border_color = border_color if border_color else bubble_border_color
-        actual_border_width = border_width if border_width >= 0 else bubble_border_width
 
         # フォント読み込み
         font = FontManager.load_font(font_name, font_size)
@@ -212,11 +198,11 @@ class SpeechBubbleNode:
                 tail_length=tail_length,
                 pos_ratio=(pos_x, pos_y),
                 text_color=text_color,
-                text_border_color=text_border_color,
                 text_border_width=text_border_width,
+                text_border_color=text_border_color,
                 bubble_color=bubble_color,
-                bubble_border_color=actual_border_color,
-                bubble_border_width=actual_border_width,
+                bubble_border_width=bubble_border_width,
+                bubble_border_color=bubble_border_color,
                 padding=padding,
                 max_chars_per_line=max_chars_per_line,
                 line_spacing=line_spacing,
