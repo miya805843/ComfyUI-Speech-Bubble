@@ -68,26 +68,26 @@ class SpeechBubbleNode:
                 "text_color": ("STRING", {
                     "default": "#000000"
                 }),
-                "bubble_color": ("STRING", {
-                    "default": "#FFFFFF"
-                }),
-                "border_color": ("STRING", {
-                    "default": "#000000"
-                }),
-                "border_width": ("INT", {
-                    "default": 3,
+                "text_border_width": ("INT", {
+                    "default": 0,
                     "min": 0,
                     "max": 30,
                     "step": 1
                 }),
-            },
-            "optional": {
-                "bubble_opacity": ("FLOAT", {
-                    "default": 1.0,
-                    "min": 0.0,
-                    "max": 1.0,
-                    "step": 0.05,
-                    "display": "slider"
+                "text_border_color": ("STRING", {
+                    "default": "#FFFFFF"
+                }),
+                "bubble_color": ("STRING", {
+                    "default": "#FFFFFF"
+                }),
+                "bubble_border_color": ("STRING", {
+                    "default": "#000000"
+                }),
+                "bubble_border_width": ("INT", {
+                    "default": 3,
+                    "min": 0,
+                    "max": 30,
+                    "step": 1
                 }),
                 "padding": ("INT", {
                     "default": 24,
@@ -107,13 +107,6 @@ class SpeechBubbleNode:
                     "max": 50,
                     "step": 1
                 }),
-                "opacity": ("FLOAT", {
-                    "default": 1.0,
-                    "min": 0.0,
-                    "max": 1.0,
-                    "step": 0.05,
-                    "display": "slider"
-                }),
                 "thought_bump_size": ("FLOAT", {
                     "default": 1.0,
                     "min": 0.2,
@@ -121,20 +114,34 @@ class SpeechBubbleNode:
                     "step": 0.05,
                     "display": "slider"
                 }),
-                "text_border_color": ("STRING", {
-                    "default": "#FFFFFF"
-                }),
-                "text_border_width": ("INT", {
-                    "default": 0,
-                    "min": 0,
-                    "max": 30,
-                    "step": 1
-                }),
                 "seed": ("INT", {
                     "default": 0,
                     "min": 0,
                     "max": 0xffffffffffffffff,
                     "control_after_generate": "randomize"
+                }),
+            },
+            "optional": {
+                "bubble_opacity": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.05,
+                    "display": "slider"
+                }),
+                "opacity": ("FLOAT", {
+                    "default": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.05,
+                    "display": "slider"
+                }),
+                # 旧パラメータ名との後方互換性用
+                "border_color": ("STRING", {
+                    "default": ""
+                }),
+                "border_width": ("INT", {
+                    "default": -1
                 }),
             }
         }
@@ -157,21 +164,28 @@ class SpeechBubbleNode:
         font_name: str,
         font_size: int,
         text_color: str,
+        text_border_width: int,
+        text_border_color: str,
         bubble_color: str,
-        border_color: str,
-        border_width: int,
+        bubble_border_color: str,
+        bubble_border_width: int,
+        padding: int,
+        max_chars_per_line: int,
+        line_spacing: int,
+        thought_bump_size: float,
+        seed: int,
         bubble_opacity: float = 1.0,
-        padding: int = 24,
-        max_chars_per_line: int = 10,
-        line_spacing: int = 6,
-        thought_bump_size: float = 1.0,
         opacity: float = 1.0,
-        text_border_color: str = "#FFFFFF",
-        text_border_width: int = 0,
-        seed: int = 0,
+        border_color: str = "",
+        border_width: int = -1,
+        **kwargs
     ):
         if torch is None:
             raise RuntimeError("PyTorchがインストールされていません。")
+
+        # 旧パラメータ名のフォールバック
+        actual_border_color = border_color if border_color else bubble_border_color
+        actual_border_width = border_width if border_width >= 0 else bubble_border_width
 
         # フォント読み込み
         font = FontManager.load_font(font_name, font_size)
@@ -198,17 +212,17 @@ class SpeechBubbleNode:
                 tail_length=tail_length,
                 pos_ratio=(pos_x, pos_y),
                 text_color=text_color,
+                text_border_color=text_border_color,
+                text_border_width=text_border_width,
                 bubble_color=bubble_color,
-                border_color=border_color,
-                border_width=border_width,
+                bubble_border_color=actual_border_color,
+                bubble_border_width=actual_border_width,
                 padding=padding,
                 max_chars_per_line=max_chars_per_line,
                 line_spacing=line_spacing,
                 thought_bump_size=thought_bump_size,
                 bubble_opacity=bubble_opacity,
                 opacity=opacity,
-                text_border_color=text_border_color,
-                text_border_width=text_border_width,
                 seed=current_seed,
             )
 

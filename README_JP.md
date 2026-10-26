@@ -80,18 +80,18 @@ git clone https://github.com/miya805843/ComfyUI-Speech-Bubble.git
 | `font_name` | `ENUM` | システム既定 | 検出されたシステムフォントまたは `fonts/` フォルダ内のフォント名。 |
 | `font_size` | `INT` | `36` | フォントサイズ（ピクセル単位）。 |
 | `text_color` | `STRING` | `#000000` | 文字色（HEXカラーコードまたはカラー名）。 |
+| `text_border_width` | `INT` | `0` | 文字の縁取りの太さ（ピクセル単位）。`0` で縁取りなし。 |
+| `text_border_color` | `STRING` | `#FFFFFF` | 文字の縁取り（袋文字）の色。 |
 | `bubble_color` | `STRING` | `#FFFFFF` | 吹き出し背景色。 |
-| `border_color` | `STRING` | `#000000` | 枠線の色。 |
-| `border_width` | `INT` | `3` | 枠線の太さ（ピクセル単位）。 |
-| `bubble_opacity`| `FLOAT` | `1.0` | 吹き出し背景の不透明度（`0.0` 〜 `1.0`）。背景を透かしたい時に使用。 |
+| `bubble_border_color` | `STRING` | `#000000` | 吹き出し枠線の色。 |
+| `bubble_border_width` | `INT` | `3` | 吹き出し枠線の太さ（ピクセル単位）。 |
 | `padding` | `INT` | `24` | 文字と吹き出し境界の間のパディング（余白）。 |
 | `max_chars_per_line` | `INT` | `10` | 自動改行・改列を行う文字数制限。 |
 | `line_spacing` | `INT` | `6` | 行間または列間の余白。 |
 | `thought_bump_size` | `FLOAT` | `1.0` | 雲型（thought）のコブ（丸）の大きさ、および叫び（shout）のトゲの山の高さ倍率（`0.2` 〜 `3.0`）。雲のモコモコ感や叫びのトゲトゲ度を自由に調整可能。 |
-| `opacity` | `FLOAT` | `1.0` | 吹き出し全体の不透明度（文字・枠線含む、`0.0` 〜 `1.0`）。 |
-| `text_border_color` | `STRING` | `#FFFFFF` | 文字の縁取り（袋文字）の色。 |
-| `text_border_width` | `INT` | `0` | 文字の縁取りの太さ（ピクセル単位）。`0` で縁取りなし。 |
-| `seed` | `INT` | `0` | 雲型（thought）および叫び（shout）の形状ランダムシード。 |
+| `seed` | `INT` | `0` | 形状ランダムシード（生成後の制御: `randomize` / `fixed` 等対応）。 |
+| `bubble_opacity`| `FLOAT` | `1.0` | （任意）吹き出し背景の不透明度（`0.0` 〜 `1.0`）。背景を透かしたい時に使用。 |
+| `opacity` | `FLOAT` | `1.0` | （任意）吹き出し全体の不透明度（文字・枠線含む、`0.0` 〜 `1.0`）。 |
 
 ---
 

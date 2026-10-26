@@ -81,18 +81,18 @@ Then restart ComfyUI.
 | `font_name` | `ENUM` | System Default | Selected font from system fonts or local `fonts/` folder. |
 | `font_size` | `INT` | `36` | Font size in pixels. |
 | `text_color` | `STRING` | `#000000` | Hex code or color name for dialogue text. |
+| `text_border_width` | `INT` | `0` | Outline/stroke thickness in pixels. Set to `0` for no outline. |
+| `text_border_color` | `STRING` | `#FFFFFF` | Color of the text outline/stroke. |
 | `bubble_color` | `STRING` | `#FFFFFF` | Hex code or color name for the bubble background. |
-| `border_color` | `STRING` | `#000000` | Outline border color. |
-| `border_width` | `INT` | `3` | Border thickness in pixels. |
-| `bubble_opacity`| `FLOAT` | `1.0` | Background opacity (`0.0` to `1.0`) to reveal hair or background through the bubble. |
+| `bubble_border_color` | `STRING` | `#000000` | Outline border color for the bubble. |
+| `bubble_border_width` | `INT` | `3` | Border thickness for the bubble in pixels. |
 | `padding` | `INT` | `24` | Padding between text and bubble boundary. |
 | `max_chars_per_line` | `INT` | `10` | Automatic wrapping character limit per column/line. |
 | `line_spacing` | `INT` | `6` | Spacing between lines or vertical columns. |
 | `thought_bump_size` | `FLOAT` | `1.0` | Size multiplier for thought (cloud) bumps and shout (spike) peak heights (`0.2` to `3.0`). Adjusts cloud fluffiness or shout spike intensity. |
-| `opacity` | `FLOAT` | `1.0` | Overall opacity of the entire speech bubble and text (`0.0` to `1.0`). |
-| `text_border_color` | `STRING` | `#FFFFFF` | Color of the text outline/stroke. |
-| `text_border_width` | `INT` | `0` | Outline/stroke thickness in pixels. Set to `0` for no outline. |
-| `seed` | `INT` | `0` | Random seed for thought (cloud) and shout (spike) procedural shapes. |
+| `seed` | `INT` | `0` | Random seed for procedural shapes (supports `control_after_generate`). |
+| `bubble_opacity`| `FLOAT` | `1.0` | (Optional) Background opacity (`0.0` to `1.0`) to reveal hair or background through the bubble. |
+| `opacity` | `FLOAT` | `1.0` | (Optional) Overall opacity of the entire speech bubble and text (`0.0` to `1.0`). |
 
 ---
 
