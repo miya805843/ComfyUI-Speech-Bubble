@@ -1,5 +1,51 @@
 import { app } from "../../scripts/app.js";
 
+// シングルトンのカラーピッカー用透明オーバーレイ要素
+let activeOverlay = null;
+
+function getOrCreateOverlay() {
+    if (activeOverlay) return activeOverlay;
+
+    const input = document.createElement("input");
+    input.type = "color";
+    input.id = "speech-bubble-color-overlay";
+    input.style.position = "fixed";
+    input.style.opacity = "0.001";
+    input.style.width = "26px";
+    input.style.height = "24px";
+    input.style.cursor = "pointer";
+    input.style.zIndex = "999999";
+    input.style.display = "none";
+    input.style.border = "none";
+    input.style.padding = "0";
+    input.style.margin = "0";
+
+    const updateColor = (e) => {
+        if (input._targetWidget && input._targetNode) {
+            input._targetWidget.value = e.target.value.toUpperCase();
+            if (input._targetWidget.callback) {
+                input._targetWidget.callback(input._targetWidget.value);
+            }
+            input._targetNode.setDirtyCanvas(true, true);
+        }
+    };
+
+    input.addEventListener("input", updateColor);
+    input.addEventListener("change", (e) => {
+        updateColor(e);
+        input.style.display = "none";
+    });
+
+    // マウスが外れたら非表示にして誤操作を防止
+    input.addEventListener("mouseleave", () => {
+        input.style.display = "none";
+    });
+
+    document.body.appendChild(input);
+    activeOverlay = input;
+    return input;
+}
+
 app.registerExtension({
     name: "ComfyUI-Speech-Bubble.ColorPicker",
     async nodeCreated(node) {
@@ -78,20 +124,53 @@ app.registerExtension({
                 ctx.restore();
             };
 
-            // クリックイベントのハンドリング
+            // クリック＆ホバーイベントのハンドリング
             w.mouse = function(event, pos, node) {
                 const margin = 15;
-                const swatchAreaStart = node.size[0] - margin - 34;
-                const isClickOnSwatch = pos[0] >= swatchAreaStart;
+                const swatchAreaStart = node.size[0] - margin - 36;
+                const isOverSwatch = pos[0] >= swatchAreaStart;
 
-                if (isClickOnSwatch) {
-                    // スウォッチをクリックした時: カラーピッカーダイアログを開く
-                    if (event.type === "pointerdown" || event.type === "mousedown") {
-                        openNativeColorPicker(event, w, node);
+                if (isOverSwatch) {
+                    const overlay = getOrCreateOverlay();
+                    overlay._targetWidget = w;
+                    overlay._targetNode = node;
+
+                    // 現在のHEX値を正規化してセット
+                    let currentVal = String(w.value || "#FFFFFF").trim();
+                    if (/^#[0-9a-fA-F]{6}$/.test(currentVal)) {
+                        overlay.value = currentVal;
+                    } else if (/^#[0-9a-fA-F]{3}$/.test(currentVal)) {
+                        overlay.value = `#${currentVal[1]}${currentVal[1]}${currentVal[2]}${currentVal[2]}${currentVal[3]}${currentVal[3]}`;
+                    } else {
+                        overlay.value = "#000000";
                     }
+
+                    // Firefox対策: マウス直下に透明な本物のinput[type=color]を重ねてスタンバイ
+                    if (event.clientX && event.clientY) {
+                        overlay.style.left = (event.clientX - 13) + "px";
+                        overlay.style.top = (event.clientY - 12) + "px";
+                        overlay.style.display = "block";
+                    }
+
+                    // クリック時: showPickerを試行し、直下のinputへの本物クリックも連動
+                    if (event.type === "pointerdown" || event.type === "mousedown") {
+                        try {
+                            if (typeof overlay.showPicker === "function") {
+                                overlay.showPicker();
+                            } else {
+                                overlay.click();
+                            }
+                        } catch (err) {
+                            // 万が一の例外時もoverlayがカーソル直下にあるため本物のクリックが通る
+                        }
+                    }
+
                     if (event.stopPropagation) event.stopPropagation();
-                    if (event.preventDefault) event.preventDefault();
                     return true;
+                } else {
+                    if (activeOverlay) {
+                        activeOverlay.style.display = "none";
+                    }
                 }
 
                 // スウォッチ以外（左側）をクリックした時: 通常のキーボード手入力プロンプトを開く
@@ -113,61 +192,3 @@ app.registerExtension({
         }
     }
 });
-
-/**
- * FirefoxおよびChrome/Edge両対応のネイティブカラーピッカー起動処理
- */
-function openNativeColorPicker(event, widget, node) {
-    let picker = document.getElementById("speech-bubble-color-picker");
-    if (!picker) {
-        picker = document.createElement("input");
-        picker.type = "color";
-        picker.id = "speech-bubble-color-picker";
-        picker.style.position = "fixed";
-        picker.style.opacity = "0.01";
-        picker.style.width = "1px";
-        picker.style.height = "1px";
-        picker.style.pointerEvents = "none";
-        picker.style.zIndex = "100000";
-        document.body.appendChild(picker);
-    }
-
-    // Firefox対策: ユーザーのクリック座標直下に透明inputを移動
-    if (event.clientX && event.clientY) {
-        picker.style.left = event.clientX + "px";
-        picker.style.top = event.clientY + "px";
-    }
-
-    // 現在の値を #RRGGBB 形式に正規化
-    let currentVal = String(widget.value || "#FFFFFF").trim();
-    if (/^#[0-9a-fA-F]{6}$/.test(currentVal)) {
-        picker.value = currentVal;
-    } else if (/^#[0-9a-fA-F]{3}$/.test(currentVal)) {
-        picker.value = `#${currentVal[1]}${currentVal[1]}${currentVal[2]}${currentVal[2]}${currentVal[3]}${currentVal[3]}`;
-    } else {
-        picker.value = "#000000";
-    }
-
-    // 色選択時の即時反映
-    const onColorUpdate = (e) => {
-        widget.value = e.target.value.toUpperCase();
-        if (widget.callback) {
-            widget.callback(widget.value);
-        }
-        node.setDirtyCanvas(true, true);
-    };
-
-    picker.oninput = onColorUpdate;
-    picker.onchange = onColorUpdate;
-
-    // Firefox (showPicker) および Chrome (showPicker / click) の両立
-    try {
-        if (typeof picker.showPicker === "function") {
-            picker.showPicker();
-        } else {
-            picker.click();
-        }
-    } catch (err) {
-        picker.click();
-    }
-}
