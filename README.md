@@ -41,6 +41,9 @@ You can easily embed readable, beautifully rendered Japanese dialogue (vertical 
 - **Text Stroke / Outline (袋文字)**:
   - Add stylized outlines to your text using `text_border_width` and `text_border_color`.
   - Works seamlessly with both horizontal and vertical text layouts (including rotated punctuation, prolonged sound marks, and small kana), dramatically boosting readability and comic appeal.
+- **Integrated Visual Color Picker**:
+  - Displays interactive color swatches directly on the right side of `text_color`, `text_border_color`, `bubble_color`, and `bubble_border_color` widgets.
+  - Clicking a swatch instantly opens your OS/browser native visual color picker (palette & eyedropper), automatically updating the HEX code without manual typing.
 - **Ultra-Crisp Anti-Aliasing**:
   - Rendered with 2x supersampling and downscaled with the Lanczos filter for smooth outlines without jagged pixels.
 
